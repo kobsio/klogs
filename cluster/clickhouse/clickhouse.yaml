@@ -1,0 +1,59 @@
+---
+apiVersion: clickhouse.altinity.com/v1
+kind: ClickHouseInstallation
+metadata:
+  name: clickhouse
+  namespace: clickhouse
+  labels:
+    app: clickhouse
+spec:
+  defaults:
+    templates:
+      serviceTemplate: default
+      dataVolumeClaimTemplate: default
+      podTemplate: default
+
+  configuration:
+    clusters:
+      - name: sharded
+        layout:
+          shardsCount: 2
+    users:
+      admin/password: admin
+      admin/networks/ip: "::/0"
+      admin/access_management: "1"
+
+  templates:
+    serviceTemplates:
+      - name: default
+        generateName: "clickhouse-{chi}"
+        spec:
+          ports:
+            - name: http
+              port: 8123
+            - name: tcp
+              port: 9000
+            - name: interserver
+              port: 9009
+          type: ClusterIP
+          clusterIP: None
+
+    volumeClaimTemplates:
+      - name: default
+        spec:
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              storage: 10Gi
+
+    podTemplates:
+      - name: default
+        podDistribution:
+          - type: ShardAntiAffinity
+        spec:
+          imagePullSecrets:
+            - name: dockerhub-registry
+          containers:
+            - name: clickhouse
+              image: yandex/clickhouse-server:21.3.14.1
