@@ -5,7 +5,7 @@ RUN go mod download
 COPY . .
 RUN make build
 
-FROM fluent/fluent-bit:1.8.4
+FROM fluent/fluent-bit:1.7.9
 COPY --from=build /root/out_clickhouse.so /fluent-bit/bin/
 COPY --from=build /root/conf/fluent-bit.conf /fluent-bit/etc/
 COPY --from=build /root/conf/plugins.conf /fluent-bit/etc/
