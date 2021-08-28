@@ -157,26 +157,12 @@ func FLBPluginFlushCtx(ctx, data unsafe.Pointer, length C.int, tag *C.char) int 
 
 		for k, v := range data {
 			value := ""
-			valueNumber := float64(0)
-			valueIsNumber := false
 
 			switch t := v.(type) {
 			case string:
 				value = t
 			case []byte:
 				value = string(t)
-			case float64:
-				valueNumber = float64(t)
-				valueIsNumber = true
-			case float32:
-				valueNumber = float64(t)
-				valueIsNumber = true
-			case int64:
-				valueNumber = float64(t)
-				valueIsNumber = true
-			case int32:
-				valueNumber = float64(t)
-				valueIsNumber = true
 			default:
 				value = fmt.Sprintf("%v", v)
 			}
@@ -199,12 +185,13 @@ func FLBPluginFlushCtx(ctx, data unsafe.Pointer, length C.int, tag *C.char) int 
 			case "log":
 				row.Log = value
 			default:
-				if valueIsNumber {
-					row.FieldsNumber.Key = append(row.FieldsNumber.Key, k)
-					row.FieldsNumber.Value = append(row.FieldsNumber.Value, valueNumber)
-				} else {
+				parsedValue, err := strconv.ParseFloat(value, 64)
+				if err != nil {
 					row.FieldsString.Key = append(row.FieldsString.Key, k)
 					row.FieldsString.Value = append(row.FieldsString.Value, value)
+				} else {
+					row.FieldsNumber.Key = append(row.FieldsNumber.Key, k)
+					row.FieldsNumber.Value = append(row.FieldsNumber.Value, parsedValue)
 				}
 			}
 		}
