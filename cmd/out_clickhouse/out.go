@@ -1,3 +1,8 @@
+// The fluent-bit-clickhouse Fluent Bit plugin can be used to write the logs collected by Fluent Bit to ClickHouse. It
+// is heavily inspired by https://github.com/devcui/clickhouse-fluent-bit with some adjustments to the configuration and
+// the table structure in ClickHouse, so that it is also possible to search through als fields of the logs. The way we
+// are saving all the json fields of a log line is taken from the following gist:
+// https://gist.github.com/alexey-milovidov/d6ffc9e0bc0bc72dd7bca90e76e3b83b.
 package main
 
 import (
