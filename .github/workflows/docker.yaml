@@ -45,5 +45,5 @@ jobs:
           push: true
           context: .
           file: ./cmd/out_clickhouse/Dockerfile
-          platforms: linux/amd64
+          platforms: linux/amd64,linux/arm,linux/arm64
           tags: kobsio/fluent-bit-clickhouse:${{ steps.tag.outputs.tag }}
