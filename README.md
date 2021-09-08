@@ -50,15 +50,16 @@ In the following you found an example configuration for Fluent Bit:
     Add   cluster fluent-bit-clickhouse
 
 [OUTPUT]
-    Name          clickhouse
-    Match         *
-    Address       clickhouse-clickhouse.clickhouse.svc.cluster.local:9000
-    Database      logs
-    Username      admin
-    Password      admin
-    Write_Timeout 20
-    Read_Timeout  10
-    Batch_Size    10000
+    Name           clickhouse
+    Match          *
+    Address        clickhouse-clickhouse.clickhouse.svc.cluster.local:9000
+    Database       logs
+    Username       admin
+    Password       admin
+    Write_Timeout  20
+    Read_Timeout   10
+    Batch_Size     10000
+    Flush_Interval 1m
 ```
 
 The SQL schema for ClickHouse must be created on each ClickHouse node and looks as follows:
