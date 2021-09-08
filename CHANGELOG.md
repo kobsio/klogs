@@ -9,6 +9,7 @@ NOTE: As semantic versioning states all 0.y.z releases can contain breaking chan
 ## Unreleased
 
 - [#2](https://github.com/kobsio/fluent-bit-clickhouse/pull/2): Add changelog.
+- [#3](https://github.com/kobsio/fluent-bit-clickhouse/pull/3): Add flush interval setting, so that the buffer is flushed after the defined interval or when the buffer size is reached.
 
 ## [v0.3.0](https://github.com/kobsio/fluent-bit-clickhouse/releases/tag/v0.3.0) (2021-09-03)
 

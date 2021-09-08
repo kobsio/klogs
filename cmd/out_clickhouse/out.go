@@ -45,16 +45,19 @@ type Row struct {
 }
 
 const (
-	defaultWriteTimeout string = "20"
-	defaultReadTimeout  string = "10"
-	defaultBatchSize    int64  = 10000
+	defaultWriteTimeout  string        = "20"
+	defaultReadTimeout   string        = "10"
+	defaultBatchSize     int64         = 10000
+	defaultFlushInterval time.Duration = 60 * time.Second
 )
 
 var (
-	database  string
-	batchSize int64
-	buffer    = make([]Row, 0)
-	client    *sql.DB
+	database      string
+	batchSize     int64
+	flushInterval time.Duration
+	lastFlush     = time.Now()
+	buffer        = make([]Row, 0)
+	client        *sql.DB
 )
 
 //export FLBPluginRegister
@@ -96,9 +99,18 @@ func FLBPluginInit(plugin unsafe.Pointer) int {
 	batchSizeStr := output.FLBPluginConfigKey(plugin, "batch_size")
 	batchSize, err = strconv.ParseInt(batchSizeStr, 10, 64)
 	if err != nil || batchSize < 0 {
+		log.Printf("[clickhouse] could not parse batchSize setting: %#v, use default setting %d", err, defaultBatchSize)
 		batchSize = defaultBatchSize
 	}
 	log.Printf("[clickhouse] batchSize = %d", batchSize)
+
+	flushIntervalStr := output.FLBPluginConfigKey(plugin, "flush_interval")
+	flushInterval, err = time.ParseDuration(flushIntervalStr)
+	if err != nil || flushInterval < 1*time.Second {
+		log.Printf("[clickhouse] could not parse flushInterval setting: %#v, use default setting %s", err, defaultFlushInterval)
+		flushInterval = defaultFlushInterval
+	}
+	log.Printf("[clickhouse] flushInterval = %s", flushInterval)
 
 	dns := "tcp://" + address + "?username=" + username + "&password=" + password + "&database=" + database + "&write_timeout=" + writeTimeout + "&read_timeout=" + readTimeout
 
@@ -204,9 +216,14 @@ func FLBPluginFlushCtx(ctx, data unsafe.Pointer, length C.int, tag *C.char) int 
 		buffer = append(buffer, row)
 	}
 
-	if len(buffer) < int(batchSize) {
+	now := time.Now()
+	startFlushTime := now
+
+	if len(buffer) < int(batchSize) && lastFlush.Add(flushInterval).After(now) {
 		return output.FLB_OK
 	}
+
+	log.Printf("[clickhouse] start flushing, batchSize = %d, flushInterval = %s", len(buffer), now.Sub(lastFlush))
 
 	sql := fmt.Sprintf("INSERT INTO %s.logs(timestamp, cluster, namespace, app, pod_name, container_name, host, fields_string.key, fields_string.value, fields_number.key, fields_number.value, log) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", database)
 
@@ -236,7 +253,11 @@ func FLBPluginFlushCtx(ctx, data unsafe.Pointer, length C.int, tag *C.char) int 
 		return output.FLB_ERROR
 	}
 
+	now = time.Now()
+	lastFlush = now
 	buffer = make([]Row, 0)
+
+	log.Printf("[clickhouse] end flushing in %s", now.Sub(startFlushTime))
 
 	return output.FLB_OK
 }
