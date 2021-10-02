@@ -2,10 +2,11 @@ package version
 
 import (
 	"bytes"
-	"fmt"
 	"runtime"
 	"strings"
 	"text/template"
+
+	"github.com/sirupsen/logrus"
 )
 
 // Build information. Populated at build-time.
@@ -50,11 +51,11 @@ func Print(program string) (string, error) {
 }
 
 // Info returns version, branch and revision information.
-func Info() string {
-	return fmt.Sprintf("version=%s, branch=%s, revision=%s", Version, Branch, Revision)
+func Info() logrus.Fields {
+	return logrus.Fields{"version": Version, "branch": Branch, "revision": Revision}
 }
 
 // BuildContext returns goVersion, buildUser and buildDate information.
-func BuildContext() string {
-	return fmt.Sprintf("go=%s, user=%s, date=%s", GoVersion, BuildUser, BuildDate)
+func BuildContext() logrus.Fields {
+	return logrus.Fields{"go": GoVersion, "user": BuildUser, "date": BuildDate}
 }
