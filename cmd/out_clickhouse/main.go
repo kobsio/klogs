@@ -7,45 +7,21 @@ package main
 
 import (
 	"C"
-	"database/sql"
 	"fmt"
 	"strconv"
 	"time"
 	"unsafe"
 
-	"github.com/kobsio/fluent-bit-clickhouse/pkg/flatten"
+	"github.com/kobsio/fluent-bit-clickhouse/pkg/clickhouse"
+	flatten "github.com/kobsio/fluent-bit-clickhouse/pkg/flatten/interface"
 	"github.com/kobsio/fluent-bit-clickhouse/pkg/version"
 
-	"github.com/ClickHouse/clickhouse-go"
 	"github.com/fluent/fluent-bit-go/output"
 	"github.com/sirupsen/logrus"
 )
 
-type FieldString struct {
-	Key   []string
-	Value []string
-}
-
-type FieldNumber struct {
-	Key   []string
-	Value []float64
-}
-
-type Row struct {
-	Timestamp    time.Time
-	Cluster      string
-	Namespace    string
-	App          string
-	Pod          string
-	Container    string
-	Host         string
-	FieldsString FieldString
-	FieldsNumber FieldNumber
-	Log          string
-}
-
 const (
-	defaultWriteTimeout  string        = "20"
+	defaultWriteTimeout  string        = "10"
 	defaultReadTimeout   string        = "10"
 	defaultBatchSize     int64         = 10000
 	defaultFlushInterval time.Duration = 60 * time.Second
@@ -58,8 +34,8 @@ var (
 	batchSize     int64
 	flushInterval time.Duration
 	lastFlush     = time.Now()
-	buffer        = make([]Row, 0)
-	client        *sql.DB
+	buffer        = make([]clickhouse.Row, 0)
+	client        *clickhouse.Client
 )
 
 //export FLBPluginRegister
@@ -124,25 +100,13 @@ func FLBPluginInit(plugin unsafe.Pointer) int {
 	}
 	log.WithFields(logrus.Fields{"flushInterval": flushInterval}).Infof("set flushInterval")
 
-	dns := "tcp://" + address + "?username=" + username + "&password=" + password + "&database=" + database + "&write_timeout=" + writeTimeout + "&read_timeout=" + readTimeout
-
-	connect, err := sql.Open("clickhouse", dns)
+	clickhouseClient, err := clickhouse.NewClient(address, username, password, database, writeTimeout, readTimeout)
 	if err != nil {
-		log.WithError(err).Errorf("could not initialize database connection")
+		log.WithError(err).Errorf("could not create ClickHouse client")
 		return output.FLB_ERROR
 	}
 
-	if err := connect.Ping(); err != nil {
-		if exception, ok := err.(*clickhouse.Exception); ok {
-			log.Errorf("[%d] %s \n%s\n", exception.Code, exception.Message, exception.StackTrace)
-		} else {
-			log.WithError(err).Errorf("could not ping database")
-		}
-
-		return output.FLB_ERROR
-	}
-
-	client = connect
+	client = clickhouseClient
 
 	return output.FLB_OK
 }
@@ -180,7 +144,7 @@ func FLBPluginFlushCtx(ctx, data unsafe.Pointer, length C.int, tag *C.char) int 
 			break
 		}
 
-		row := Row{
+		row := clickhouse.Row{
 			Timestamp: timestamp,
 		}
 
@@ -228,48 +192,17 @@ func FLBPluginFlushCtx(ctx, data unsafe.Pointer, length C.int, tag *C.char) int 
 		buffer = append(buffer, row)
 	}
 
-	now := time.Now()
-	startFlushTime := now
-
-	if len(buffer) < int(batchSize) && lastFlush.Add(flushInterval).After(now) {
+	startFlushTime := time.Now()
+	if len(buffer) < int(batchSize) && lastFlush.Add(flushInterval).After(startFlushTime) {
 		return output.FLB_OK
 	}
 
-	log.WithFields(logrus.Fields{"batchSize": len(buffer), "flushInterval": now.Sub(lastFlush)}).Infof("start flushing")
+	log.WithFields(logrus.Fields{"batchSize": len(buffer), "flushInterval": startFlushTime.Sub(lastFlush)}).Infof("start flushing")
+	client.Write(buffer)
 
-	sql := fmt.Sprintf("INSERT INTO %s.logs(timestamp, cluster, namespace, app, pod_name, container_name, host, fields_string.key, fields_string.value, fields_number.key, fields_number.value, log) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", database)
-
-	tx, err := client.Begin()
-	if err != nil {
-		log.WithError(err).Errorf("begin transaction failure")
-		return output.FLB_ERROR
-	}
-
-	smt, err := tx.Prepare(sql)
-	if err != nil {
-		log.WithError(err).Errorf("prepare statement failure")
-		return output.FLB_ERROR
-	}
-
-	for _, l := range buffer {
-		_, err = smt.Exec(l.Timestamp, l.Cluster, l.Namespace, l.App, l.Pod, l.Container, l.Host, l.FieldsString.Key, l.FieldsString.Value, l.FieldsNumber.Key, l.FieldsNumber.Value, l.Log)
-
-		if err != nil {
-			log.WithError(err).Errorf("statement exec failure")
-			return output.FLB_ERROR
-		}
-	}
-
-	if err = tx.Commit(); err != nil {
-		log.WithError(err).Errorf("commit failed failure")
-		return output.FLB_ERROR
-	}
-
-	now = time.Now()
-	lastFlush = now
-	buffer = make([]Row, 0)
-
-	log.WithFields(logrus.Fields{"flushTime": now.Sub(startFlushTime)}).Infof("end flushing")
+	lastFlush = time.Now()
+	buffer = make([]clickhouse.Row, 0)
+	log.WithFields(logrus.Fields{"flushTime": lastFlush.Sub(startFlushTime)}).Infof("end flushing")
 
 	return output.FLB_OK
 }

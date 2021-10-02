@@ -9,6 +9,7 @@ NOTE: As semantic versioning states all 0.y.z releases can contain breaking chan
 ## Unreleased
 
 - [#4](https://github.com/kobsio/fluent-bit-clickhouse/pull/4): Use logrus for logging and remove conf directory.
+- [#5](https://github.com/kobsio/fluent-bit-clickhouse/pull/5): Add support for Kafka, so that Fluent Bit writes all logs to Kafka and we then write the logs from Kafka to ClickHouse.
 
 ## [v0.4.0](https://github.com/kobsio/fluent-bit-clickhouse/releases/tag/v0.4.0) (2021-09-08)
 
