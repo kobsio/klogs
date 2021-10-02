@@ -9,7 +9,6 @@ import (
 	"C"
 	"database/sql"
 	"fmt"
-	"log"
 	"strconv"
 	"time"
 	"unsafe"
@@ -19,6 +18,7 @@ import (
 
 	"github.com/ClickHouse/clickhouse-go"
 	"github.com/fluent/fluent-bit-go/output"
+	"github.com/sirupsen/logrus"
 )
 
 type FieldString struct {
@@ -52,6 +52,8 @@ const (
 )
 
 var (
+	log = logrus.WithFields(logrus.Fields{"package": "clickhouse"})
+
 	database      string
 	batchSize     int64
 	flushInterval time.Duration
@@ -69,62 +71,72 @@ func FLBPluginRegister(def unsafe.Pointer) int {
 func FLBPluginInit(plugin unsafe.Pointer) int {
 	var err error
 
-	log.Printf("[clickhouse] %s", version.Info())
-	log.Printf("[clickhouse] %s", version.BuildContext())
+	logFormat := output.FLBPluginConfigKey(plugin, "log_format")
+
+	if logFormat == "json" {
+		logrus.SetFormatter(&logrus.JSONFormatter{})
+	} else {
+		logrus.SetFormatter(&logrus.TextFormatter{
+			FullTimestamp: true,
+		})
+	}
+
+	log.WithFields(version.Info()).Infof("Version information")
+	log.WithFields(version.BuildContext()).Infof("Build context")
 
 	address := output.FLBPluginConfigKey(plugin, "address")
-	log.Printf("[clickhouse] address = %q", address)
+	log.WithFields(logrus.Fields{"address": address}).Infof("set address")
 
 	database = output.FLBPluginConfigKey(plugin, "database")
-	log.Printf("[clickhouse] database = %q", database)
+	log.WithFields(logrus.Fields{"database": database}).Infof("set database")
 
 	username := output.FLBPluginConfigKey(plugin, "username")
-	log.Printf("[clickhouse] username = %q", username)
+	log.WithFields(logrus.Fields{"username": username}).Infof("set username")
 
 	password := output.FLBPluginConfigKey(plugin, "password")
-	log.Printf("[clickhouse] password = *****")
+	log.WithFields(logrus.Fields{"password": "*****"}).Infof("set password")
 
 	writeTimeout := output.FLBPluginConfigKey(plugin, "write_timeout")
 	if writeTimeout == "" {
 		writeTimeout = defaultReadTimeout
 	}
-	log.Printf("[clickhouse] writeTimeout = %s", writeTimeout)
+	log.WithFields(logrus.Fields{"writeTimeout": writeTimeout}).Infof("set writeTimeout")
 
 	readTimeout := output.FLBPluginConfigKey(plugin, "read_timeout")
 	if readTimeout == "" {
 		readTimeout = defaultReadTimeout
 	}
-	log.Printf("[clickhouse] readTimeout = %s", readTimeout)
+	log.WithFields(logrus.Fields{"readTimeout": readTimeout}).Infof("set readTimeout")
 
 	batchSizeStr := output.FLBPluginConfigKey(plugin, "batch_size")
 	batchSize, err = strconv.ParseInt(batchSizeStr, 10, 64)
 	if err != nil || batchSize < 0 {
-		log.Printf("[clickhouse] could not parse batchSize setting: %#v, use default setting %d", err, defaultBatchSize)
+		log.WithError(err).Errorf("could not parse batchSize setting, use default setting %d", defaultBatchSize)
 		batchSize = defaultBatchSize
 	}
-	log.Printf("[clickhouse] batchSize = %d", batchSize)
+	log.WithFields(logrus.Fields{"batchSize": batchSize}).Infof("set batchSize")
 
 	flushIntervalStr := output.FLBPluginConfigKey(plugin, "flush_interval")
 	flushInterval, err = time.ParseDuration(flushIntervalStr)
 	if err != nil || flushInterval < 1*time.Second {
-		log.Printf("[clickhouse] could not parse flushInterval setting: %#v, use default setting %s", err, defaultFlushInterval)
+		log.WithError(err).Errorf("could not parse flushInterval setting, use default setting %s", defaultFlushInterval)
 		flushInterval = defaultFlushInterval
 	}
-	log.Printf("[clickhouse] flushInterval = %s", flushInterval)
+	log.WithFields(logrus.Fields{"flushInterval": flushInterval}).Infof("set flushInterval")
 
 	dns := "tcp://" + address + "?username=" + username + "&password=" + password + "&database=" + database + "&write_timeout=" + writeTimeout + "&read_timeout=" + readTimeout
 
 	connect, err := sql.Open("clickhouse", dns)
 	if err != nil {
-		log.Printf("[clickhouse] could not initialize database connection: %#v", err)
+		log.WithError(err).Errorf("could not initialize database connection")
 		return output.FLB_ERROR
 	}
 
 	if err := connect.Ping(); err != nil {
 		if exception, ok := err.(*clickhouse.Exception); ok {
-			log.Printf("[clickhouse] [%d] %s \n%s\n", exception.Code, exception.Message, exception.StackTrace)
+			log.Errorf("[%d] %s \n%s\n", exception.Code, exception.Message, exception.StackTrace)
 		} else {
-			log.Printf("[clickhouse] could not ping database: %#v", err)
+			log.WithError(err).Errorf("could not ping database")
 		}
 
 		return output.FLB_ERROR
@@ -137,7 +149,7 @@ func FLBPluginInit(plugin unsafe.Pointer) int {
 
 //export FLBPluginFlush
 func FLBPluginFlush(data unsafe.Pointer, length C.int, tag *C.char) int {
-	log.Printf("[clickhouse] flush called for unknown instance")
+	log.Errorf("flush called for unknown instance")
 	return output.FLB_OK
 }
 
@@ -158,13 +170,13 @@ func FLBPluginFlushCtx(ctx, data unsafe.Pointer, length C.int, tag *C.char) int 
 		case uint64:
 			timestamp = time.Unix(int64(t), 0)
 		default:
-			log.Printf("[clickhouse] time provided invalid, defaulting to now.")
+			log.Warnf("time provided invalid, defaulting to now.")
 			timestamp = time.Now()
 		}
 
 		data, err := flatten.Flatten(record)
 		if err != nil {
-			log.Printf("[clickhouse] could not flat data: %#v", err)
+			log.WithError(err).Errorf("could not flat data")
 			break
 		}
 
@@ -223,19 +235,19 @@ func FLBPluginFlushCtx(ctx, data unsafe.Pointer, length C.int, tag *C.char) int 
 		return output.FLB_OK
 	}
 
-	log.Printf("[clickhouse] start flushing, batchSize = %d, flushInterval = %s", len(buffer), now.Sub(lastFlush))
+	log.WithFields(logrus.Fields{"batchSize": len(buffer), "flushInterval": now.Sub(lastFlush)}).Infof("start flushing")
 
 	sql := fmt.Sprintf("INSERT INTO %s.logs(timestamp, cluster, namespace, app, pod_name, container_name, host, fields_string.key, fields_string.value, fields_number.key, fields_number.value, log) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", database)
 
 	tx, err := client.Begin()
 	if err != nil {
-		log.Printf("[clickhouse] begin transaction failure: %#v", err)
+		log.WithError(err).Errorf("begin transaction failure")
 		return output.FLB_ERROR
 	}
 
 	smt, err := tx.Prepare(sql)
 	if err != nil {
-		log.Printf("[clickhouse] prepare statement failure: %#v", err)
+		log.WithError(err).Errorf("prepare statement failure")
 		return output.FLB_ERROR
 	}
 
@@ -243,13 +255,13 @@ func FLBPluginFlushCtx(ctx, data unsafe.Pointer, length C.int, tag *C.char) int 
 		_, err = smt.Exec(l.Timestamp, l.Cluster, l.Namespace, l.App, l.Pod, l.Container, l.Host, l.FieldsString.Key, l.FieldsString.Value, l.FieldsNumber.Key, l.FieldsNumber.Value, l.Log)
 
 		if err != nil {
-			log.Printf("[clickhouse] statement exec failure: %#v", err)
+			log.WithError(err).Errorf("statement exec failure")
 			return output.FLB_ERROR
 		}
 	}
 
 	if err = tx.Commit(); err != nil {
-		log.Printf("[clickhouse] commit failed failure: %#v", err)
+		log.WithError(err).Errorf("commit failed failure")
 		return output.FLB_ERROR
 	}
 
@@ -257,14 +269,14 @@ func FLBPluginFlushCtx(ctx, data unsafe.Pointer, length C.int, tag *C.char) int 
 	lastFlush = now
 	buffer = make([]Row, 0)
 
-	log.Printf("[clickhouse] end flushing in %s", now.Sub(startFlushTime))
+	log.WithFields(logrus.Fields{"flushTime": now.Sub(startFlushTime)}).Infof("end flushing")
 
 	return output.FLB_OK
 }
 
 //export FLBPluginExit
 func FLBPluginExit() int {
-	log.Printf("[clickhouse] exit called for unknown instance")
+	log.Errorf("exit called for unknown instance")
 	return output.FLB_OK
 }
 
