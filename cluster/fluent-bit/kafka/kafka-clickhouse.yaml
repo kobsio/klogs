@@ -1,0 +1,49 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kafka-clickhouse
+  namespace: fluent-bit
+  labels:
+    app: kafka-clickhouse
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: kafka-clickhouse
+  template:
+    metadata:
+      labels:
+        app: kafka-clickhouse
+    spec:
+      containers:
+        - name: kafka-clickhouse
+          image: localhost:5000/fluent-bit-clickhouse:kafka-latest
+          imagePullPolicy: Always
+          args:
+            - --clickhouse.address=clickhouse-clickhouse.clickhouse.svc.cluster.local:9000
+            - --clickhouse.username=admin
+            - --clickhouse.password=admin
+            - --kafka.brokers=kafka-kafka-0.kafka-kafka-brokers.kafka.svc.cluster.local:9092,kafka-kafka-1.kafka-kafka-brokers.kafka.svc.cluster.local:9092,kafka-kafka-2.kafka-kafka-brokers.kafka.svc.cluster.local:9092
+            - --log.format=json
+            - --log.level=trace
+          ports:
+            - containerPort: 8080
+              name: http
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+          resources:
+            limits:
+              cpu: 500m
+              memory: 512Mi
+            requests:
+              cpu: 100m
+              memory: 128Mi
