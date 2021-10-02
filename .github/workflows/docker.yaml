@@ -44,12 +44,12 @@ jobs:
         with:
           push: true
           context: .
-          file: ./cmd/out_clickhouse/Dockerfile
+          file: ./cmd/fluent-bit-clickhouse/Dockerfile
           platforms: linux/amd64,linux/arm,linux/arm64
           tags: kobsio/fluent-bit-clickhouse:${{ steps.tag.outputs.tag }}
 
-  kafka-clickhouse:
-    name: Kafka -> Clickhouse
+  fluent-bit-kafka-clickhouse:
+    name: Fluent Bit -> Kafka -> Clickhouse
     runs-on: ubuntu-20.04
     steps:
       - name: Checkout
@@ -84,6 +84,6 @@ jobs:
         with:
           push: true
           context: .
-          file: ./cmd/out_clickhouse/Dockerfile
+          file: ./cmd/fluent-bit-kafka-clickhouse/Dockerfile
           platforms: linux/amd64,linux/arm,linux/arm64
-          tags: kobsio/fluent-bit-clickhouse:kafka-${{ steps.tag.outputs.tag }}
+          tags: kobsio/fluent-bit-clickhouse:${{ steps.tag.outputs.tag }}-kafka

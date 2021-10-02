@@ -11,11 +11,11 @@ We are using [kind](https://kind.sigs.k8s.io/docs/user/quick-start/) for local d
 Once the cluster is running we can build and push the Docker image for Fluent Bit:
 
 ```sh
-docker build -f cmd/kafka/Dockerfile -t localhost:5000/fluent-bit-clickhouse:kafka-latest .
-docker push localhost:5000/fluent-bit-clickhouse:kafka-latest
+docker build -f cmd/kafka/Dockerfile -t localhost:5000/fluent-bit-clickhouse:latest-kafka .
+docker push localhost:5000/fluent-bit-clickhouse:latest-kafka
 
 # To run the Docker image locally, the following command can be used:
-docker run -it --rm localhost:5000/fluent-bit-clickhouse:kafka-latest
+docker run -it --rm localhost:5000/fluent-bit-clickhouse:latest-kafka
 ```
 
 In the next step we have to create our ClickHouse cluster via the [ClickHouse Operator](https://github.com/Altinity/clickhouse-operator). To do that we can deploy all the files from the `cluster/clickhouse-operator` and `cluster/clickhouse` folder:

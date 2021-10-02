@@ -11,7 +11,7 @@ We are using [kind](https://kind.sigs.k8s.io/docs/user/quick-start/) for local d
 Once the cluster is running we can build and push the Docker image for Fluent Bit:
 
 ```sh
-docker build -f cmd/out_clickhouse/Dockerfile -t localhost:5000/fluent-bit-clickhouse:latest .
+docker build -f cmd/fluent-bit-clickhouse/Dockerfile -t localhost:5000/fluent-bit-clickhouse:latest .
 docker push localhost:5000/fluent-bit-clickhouse:latest
 
 # To run the Docker image locally, the following command can be used:
