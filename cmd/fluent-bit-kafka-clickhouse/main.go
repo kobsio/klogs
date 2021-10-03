@@ -123,8 +123,8 @@ func init() {
 	flag.StringVar(&clickhouseDatabase, "clickhouse.database", defaultClickHouseDatabase, "ClickHouse database name")
 	flag.StringVar(&clickhouseWriteTimeout, "clickhouse.write-timeout", defaultClickHouseWriteTimeout, "ClickHouse write timeout for the connection")
 	flag.StringVar(&clickhouseReadTimeout, "clickhouse.read-timeout", defaultClickHouseReadTimeout, "ClickHouse read timeout for the connection")
-	flag.Int64Var(&clickhouseBatchSize, "clickhouse.batch-size", defaultClickHouseBatchSize, "ClickHouse maximum batch size, before log lines are written to ClickHouse")
-	flag.DurationVar(&clickhouseFlushInterval, "clickhouse.flush-interval", defaultClickHouseFlushInterval, "ClickHouse maximum time, before log lines are written to ClickHouse")
+	flag.Int64Var(&clickhouseBatchSize, "clickhouse.batch-size", defaultClickHouseBatchSize, "The size for how many log lines should be buffered, before they are written to ClickHouse")
+	flag.DurationVar(&clickhouseFlushInterval, "clickhouse.flush-interval", defaultClickHouseFlushInterval, "The maximum amount of time to wait, before logs are written to ClickHouse")
 
 	flag.StringVar(&kafkaBrokers, "kafka.brokers", defaultKafkaBrokers, "Kafka bootstrap brokers to connect to, as a comma separated list")
 	flag.StringVar(&kafkaGroup, "kafka.group", defaultKafkaGroup, "Kafka consumer group definition")

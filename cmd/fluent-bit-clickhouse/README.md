@@ -1,5 +1,25 @@
 # Fluent Bit -> ClickHouse
 
+The Fluent Bit output plugin for ClickHouse can be used to write the collected logs from Fluent Bit into ClickHouse.
+
+![Fluent Bit -> ClickHouse](../../assets/fluent-bit-clickhouse.png)
+
+## Configuration
+
+An example configuration file can be found in the [fluent-bit-cm.yaml](../../cluster/fluent-bit/clickhouse/fluent-bit-cm.yaml) ConfigMap. The following options are available:
+
+| Option | Description | Default |
+| ------ | ----------- | ------- |
+| `Address` | The address, where ClickHouse is listining on, e.g. `clickhouse-clickhouse.clickhouse.svc.cluster.local:9000`. | |
+| `Database` | The name of the database for the logs. | `logs` |
+| `Username` | The username, to authenticate to ClickHouse. | |
+| `Password` | The password, to authenticate to ClickHouse. | |
+| `Write_Timeout` | The write timeout for ClickHouse. | `10` |
+| `Read_Timeout` | The read timeout for ClickHouse. | `10` |
+| `Batch_Size` | The size for how many log lines should be buffered, before they are written to ClickHouse. | `10000` |
+| `Flush_Interval` | The maximum amount of time to wait, before logs are written to ClickHouse. | `60s` |
+| `Log_Format` | The log format for the Fluent Bit ClickHouse plugin. Must be `plain` or `json`. | `plain` |
+
 ## Development
 
 We are using [kind](https://kind.sigs.k8s.io/docs/user/quick-start/) for local development. To create a new Kubernetes cluster using kind you can run the `cluster/cluster.sh` script, which will create such a cluster with a Docker registry:
