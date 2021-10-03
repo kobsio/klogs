@@ -1,5 +1,30 @@
 # Fluent Bit -> Kafka -> ClickHouse
 
+The Fluent Bit Kafka ClickHouse connector can be used to ingest the logs from Kafka into ClickHouse. To write the logs from Fluent Bit into Kafka the official [Kafka output plugin](https://docs.fluentbit.io/manual/pipeline/outputs/kafka) can be used.
+
+![Fluent Bit -> Kafka -> ClickHouse](../../assets/fluent-bit-kafka-clickhouse.png)
+
+## Configuration
+
+An example Deployment for the Kafka ClickHouse connector can be found in the [fluent-bit-kafka-clickhouse.yaml](../../cluster/fluent-bit/kafka/fluent-bit-kafka-clickhouse.yaml) file. The following command-line flags and environment variables can be used to configure the connector:
+
+| Command-Line Flag | Environment Variable | Description | Default |
+| ----------------- | -------------------- | ----------- | ------- |
+| `--clickhouse.address` | `CLICKHOUSE_ADDRESS` | ClickHouse address to connect to. | |
+| `--clickhouse.database` | `CLICKHOUSE_DATABASE` | ClickHouse database name. | `logs` |
+| `--clickhouse.username` | `CLICKHOUSE_USERNAME` | ClickHouse username for the connection. | |
+| `--clickhouse.password` | `CLICKHOUSE_PASSWORD` | ClickHouse password for the connection. | |
+| `--clickhouse.write-timeout` | `CLICKHOUSE_WRITE_TIMEOUT` | ClickHouse write timeout for the connection. | `10` |
+| `--clickhouse.read-timeout` | `CLICKHOUSE_READ_TIMEOUT` | ClickHouse read timeout for the connection. | `10` |
+| `--clickhouse.batch-size` | `CLICKHOUSE_BATCH_SIZE` | The size for how many log lines should be buffered, before they are written to ClickHouse. | `100000` |
+| `--clickhouse.flush-interval` | `CLICKHOUSE_FLUSH_INTERVAL` | The maximum amount of time to wait, before logs are written to ClickHouse. | `60s` |
+| `--kafka.brokers` | `KAFKA_BROKERS` | Kafka bootstrap brokers to connect to, as a comma separated list | |
+| `--kafka.group` | `KAFKA_GROUP` | Kafka consumer group definition | `kafka-clickhouse` |
+| `--kafka.version` | `KAFKA_VERSION` | Kafka cluster version | `2.1.1` |
+| `--kafka.topics` | `KAFKA_TOPICS` | Kafka topics to be consumed, as a comma separated list | `fluent-bit` |
+| `--log.format` | `LOG_FORMAT` | The log format. Must be `plain` or `json`. | `plain` |
+| `--log.level` | `LOG_LEVEL` | The log level. Must be `trace`, `debug`, `info`, `warn`, `error`, `fatal` or `panic`. | `info` |
+
 ## Development
 
 We are using [kind](https://kind.sigs.k8s.io/docs/user/quick-start/) for local development. To create a new Kubernetes cluster using kind you can run the `cluster/cluster.sh` script, which will create such a cluster with a Docker registry:
@@ -32,10 +57,16 @@ k exec -n clickhouse -it chi-clickhouse-sharded-0-0-0 -c clickhouse -- clickhous
 k exec -n clickhouse -it chi-clickhouse-sharded-1-0-0 -c clickhouse -- clickhouse-client
 ```
 
-Now we can deploy Fluent Bit to ingest all logs into ClickHouse:
+Before we can deploy Fluent Bit and the Kafka to ClickHouse connector, we have to deploy Kafka using the following command:
 
 ```sh
-k apply -f cluster/fluent-bit/clickhouse
+k apply -f cluster/kafka
+```
+
+Now we can deploy Fluent Bit to ingest all logs into Kafka and the Kafka to ClickHouse connector to write the logs from Kafka into ClickHouse:
+
+```sh
+k apply -f cluster/fluent-bit/kafka
 k logs -n fluent-bit -l app=fluent-bit -f
 ```
 

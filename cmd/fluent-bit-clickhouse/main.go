@@ -21,6 +21,7 @@ import (
 )
 
 const (
+	defaultDatabase      string        = "logs"
 	defaultWriteTimeout  string        = "10"
 	defaultReadTimeout   string        = "10"
 	defaultBatchSize     int64         = 10000
@@ -64,6 +65,9 @@ func FLBPluginInit(plugin unsafe.Pointer) int {
 	log.WithFields(logrus.Fields{"address": address}).Infof("set address")
 
 	database = output.FLBPluginConfigKey(plugin, "database")
+	if database == "" {
+		database = defaultDatabase
+	}
 	log.WithFields(logrus.Fields{"database": database}).Infof("set database")
 
 	username := output.FLBPluginConfigKey(plugin, "username")
