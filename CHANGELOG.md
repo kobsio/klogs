@@ -12,6 +12,7 @@ NOTE: As semantic versioning states all 0.y.z releases can contain breaking chan
 - [#5](https://github.com/kobsio/fluent-bit-clickhouse/pull/5): Add support for Kafka, so that Fluent Bit writes all logs to Kafka and we then write the logs from Kafka to ClickHouse.
 - [#6](https://github.com/kobsio/fluent-bit-clickhouse/pull/6): Use consistent naming.
 - [#7](https://github.com/kobsio/fluent-bit-clickhouse/pull/7): Adjust documentation.
+- [#8](https://github.com/kobsio/fluent-bit-clickhouse/pull/8): Make timestamp key configurable.
 
 ## [v0.4.0](https://github.com/kobsio/fluent-bit-clickhouse/releases/tag/v0.4.0) (2021-09-08)
 
