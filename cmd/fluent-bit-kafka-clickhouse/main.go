@@ -31,6 +31,7 @@ var (
 	kafkaGroup              string
 	kafkaVersion            string
 	kafkaTopics             string
+	kafkaTimestampKey       string
 	logFormat               string
 	logLevel                string
 	showVersion             bool
@@ -107,6 +108,11 @@ func init() {
 		defaultKafkaTopics = os.Getenv("KAFKA_TOPICS")
 	}
 
+	defaultKafkaTimestampKey := "@timestamp"
+	if os.Getenv("KAFKA_TIMESTAMP_KEY") != "" {
+		defaultKafkaTimestampKey = os.Getenv("KAFKA_TIMESTAMP_KEY")
+	}
+
 	defaultLogFormat := "plain"
 	if os.Getenv("LOG_FORMAT") != "" {
 		defaultLogFormat = os.Getenv("LOG_FORMAT")
@@ -130,6 +136,7 @@ func init() {
 	flag.StringVar(&kafkaGroup, "kafka.group", defaultKafkaGroup, "Kafka consumer group definition")
 	flag.StringVar(&kafkaVersion, "kafka.version", defaultKafkaVersion, "Kafka cluster version")
 	flag.StringVar(&kafkaTopics, "kafka.topics", defaultKafkaTopics, "Kafka topics to be consumed, as a comma separated list")
+	flag.StringVar(&kafkaTimestampKey, "kafka.timestamp-key", defaultKafkaTimestampKey, "JSON key where the record timestamp is stored")
 
 	flag.StringVar(&logFormat, "log.format", defaultLogFormat, "Set the output format of the logs. Must be \"plain\" or \"json\".")
 	flag.StringVar(&logLevel, "log.level", defaultLogLevel, "Set the log level. Must be \"trace\", \"debug\", \"info\", \"warn\", \"error\", \"fatal\" or \"panic\".")
@@ -206,6 +213,6 @@ func main() {
 		log.WithError(err).Fatalf("could not create ClickHouse client")
 	}
 
-	kafka.Run(kafkaBrokers, kafkaGroup, kafkaVersion, kafkaTopics, clickhouseBatchSize, clickhouseFlushInterval, client)
+	kafka.Run(kafkaBrokers, kafkaGroup, kafkaVersion, kafkaTopics, kafkaTimestampKey, clickhouseBatchSize, clickhouseFlushInterval, client)
 	server.Shutdown(context.Background())
 }

@@ -31,6 +31,7 @@ var (
 // Consumer represents a Sarama consumer group consumer.
 type Consumer struct {
 	ready                   chan bool
+	timestampKey            string
 	lastFlush               time.Time
 	clickhouseBatchSize     int64
 	clickhouseFlushInterval time.Duration
@@ -84,7 +85,7 @@ func (consumer *Consumer) ConsumeClaim(session sarama.ConsumerGroupSession, clai
 			}
 
 			switch k {
-			case "@timestamp":
+			case consumer.timestampKey:
 				parsedTime, err := strconv.ParseFloat(value, 64)
 				if err != nil {
 					log.WithError(err).Warnf("could not parse timestamp")

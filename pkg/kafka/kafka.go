@@ -21,7 +21,7 @@ var (
 
 // Run creates a new client for the given Kafka configuration and listens for incomming messages. These messages are
 // then written to ClickHouse when the batch size or flush interval is over.
-func Run(kafkaBrokers, kafkaGroup, kafkaVersion, kafkaTopics string, clickhouseBatchSize int64, clickhouseFlushInterval time.Duration, clickhouseClient *clickhouse.Client) {
+func Run(kafkaBrokers, kafkaGroup, kafkaVersion, kafkaTopics, kafkaTimestampKey string, clickhouseBatchSize int64, clickhouseFlushInterval time.Duration, clickhouseClient *clickhouse.Client) {
 	version, err := sarama.ParseKafkaVersion(kafkaVersion)
 	if err != nil {
 		log.WithError(err).Fatalf("error parsing Kafka version")
@@ -35,6 +35,7 @@ func Run(kafkaBrokers, kafkaGroup, kafkaVersion, kafkaTopics string, clickhouseB
 	// Create a new consumer, which handles all incomming messages from Kafka and writes the messages to ClickHouse.
 	consumer := Consumer{
 		ready:                   make(chan bool),
+		timestampKey:            kafkaTimestampKey,
 		lastFlush:               time.Now(),
 		clickhouseBatchSize:     clickhouseBatchSize,
 		clickhouseFlushInterval: clickhouseFlushInterval,
