@@ -36,3 +36,13 @@ CREATE TABLE IF NOT EXISTS logs.logs_local(
 
 CREATE TABLE IF NOT EXISTS logs.logs AS logs.logs_local ENGINE = Distributed('{cluster}', logs, logs_local, cityHash64(cluster, namespace, app, pod_name, container_name, host));
 ```
+
+To speedup queries for the most frequently queried fields we can materializing them to dedicated columns:
+
+```sql
+ALTER TABLE logs.logs_local ADD COLUMN content.level String DEFAULT fields_string.value[indexOf(fields_string.key, 'content.level')]
+ALTER TABLE logs.logs ADD COLUMN content.level String DEFAULT fields_string.value[indexOf(fields_string.key, 'content.level')]
+
+ALTER TABLE logs.logs_local ADD COLUMN content.response_code Float64 DEFAULT fields_number.value[indexOf(fields_number.key, 'content.response_code')]
+ALTER TABLE logs.logs ADD COLUMN content.response_code Float64 DEFAULT fields_number.value[indexOf(fields_number.key, 'content.response_code')]
+```
