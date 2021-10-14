@@ -153,42 +153,76 @@ func FLBPluginFlushCtx(ctx, data unsafe.Pointer, length C.int, tag *C.char) int 
 		}
 
 		for k, v := range data {
-			value := ""
+			var stringValue string
+			var numberValue float64
+			var isNumber bool
 
 			switch t := v.(type) {
 			case string:
-				value = t
+				stringValue = t
 			case []byte:
-				value = string(t)
+				stringValue = string(t)
+			case int:
+				isNumber = true
+				numberValue = float64(t)
+			case int8:
+				isNumber = true
+				numberValue = float64(t)
+			case int16:
+				isNumber = true
+				numberValue = float64(t)
+			case int32:
+				isNumber = true
+				numberValue = float64(t)
+			case int64:
+				isNumber = true
+				numberValue = float64(t)
+			case float32:
+				isNumber = true
+				numberValue = float64(t)
+			case float64:
+				isNumber = true
+				numberValue = float64(t)
+			case uint8:
+				isNumber = true
+				numberValue = float64(t)
+			case uint16:
+				isNumber = true
+				numberValue = float64(t)
+			case uint32:
+				isNumber = true
+				numberValue = float64(t)
+			case uint64:
+				isNumber = true
+				numberValue = float64(t)
 			default:
-				value = fmt.Sprintf("%v", v)
+				stringValue = fmt.Sprintf("%v", v)
 			}
 
 			switch k {
 			case "cluster":
-				row.Cluster = value
+				row.Cluster = stringValue
 			case "kubernetes.namespace_name":
-				row.Namespace = value
+				row.Namespace = stringValue
 			case "kubernetes.labels.k8s-app":
-				row.App = value
+				row.App = stringValue
 			case "kubernetes.labels.app":
-				row.App = value
+				row.App = stringValue
 			case "kubernetes.pod_name":
-				row.Pod = value
+				row.Pod = stringValue
 			case "kubernetes.container_name":
-				row.Container = value
+				row.Container = stringValue
 			case "kubernetes.host":
-				row.Host = value
+				row.Host = stringValue
 			case "log":
-				row.Log = value
+				row.Log = stringValue
 			default:
-				parsedValue, err := strconv.ParseFloat(value, 64)
-				if err != nil {
-					row.FieldsString.Key = append(row.FieldsString.Key, k)
-					row.FieldsString.Value = append(row.FieldsString.Value, value)
-				} else {
+				if isNumber {
 					row.FieldsNumber.Key = append(row.FieldsNumber.Key, k)
-					row.FieldsNumber.Value = append(row.FieldsNumber.Value, parsedValue)
+					row.FieldsNumber.Value = append(row.FieldsNumber.Value, numberValue)
+				} else {
+					row.FieldsString.Key = append(row.FieldsString.Key, k)
+					row.FieldsString.Value = append(row.FieldsString.Value, stringValue)
 				}
 			}
 		}
