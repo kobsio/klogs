@@ -8,6 +8,8 @@ NOTE: As semantic versioning states all 0.y.z releases can contain breaking chan
 
 ## Unreleased
 
+## [v0.5.1](https://github.com/kobsio/fluent-bit-clickhouse/releases/tag/v0.5.1) (2021-10-14)
+
 - [#9](https://github.com/kobsio/fluent-bit-clickhouse/pull/9): Improve parsing of number fields.
 
 ## [v0.5.0](https://github.com/kobsio/fluent-bit-clickhouse/releases/tag/v0.5.0) (2021-10-03)
