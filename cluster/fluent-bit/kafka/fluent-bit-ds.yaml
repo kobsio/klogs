@@ -18,7 +18,7 @@ spec:
       serviceAccountName: fluent-bit
       serviceAccount: fluent-bit
       containers:
-        - image: fluent/fluent-bit:1.8.4
+        - image: fluent/fluent-bit:1.8.8
           imagePullPolicy: IfNotPresent
           name: fluent-bit
           ports:
