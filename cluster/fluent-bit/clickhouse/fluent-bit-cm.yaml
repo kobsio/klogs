@@ -47,16 +47,20 @@ data:
         Add   cluster fluent-bit-clickhouse
 
     [OUTPUT]
-        Name           clickhouse
-        Match          *
-        Address        clickhouse-clickhouse.clickhouse.svc.cluster.local:9000
-        Database       logs
-        Username       admin
-        Password       admin
-        Write_Timeout  20
-        Read_Timeout   10
-        Batch_Size     10000
-        Flush_Interval 1m
+        Name                  clickhouse
+        Match                 *
+        Address               clickhouse-clickhouse.clickhouse.svc.cluster.local:9000
+        Database              logs
+        Username              admin
+        Password              admin
+        Write_Timeout         20
+        Read_Timeout          10
+        Async_Insert          true
+        Wait_For_Async_Insert true
+        Batch_Size            1000
+        Flush_Interval        10s
+        Log_Format            plain
+        Log_Level             debug
 
   parsers.conf: |
     [PARSER]

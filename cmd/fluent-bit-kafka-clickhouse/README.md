@@ -16,6 +16,8 @@ An example Deployment for the Kafka ClickHouse connector can be found in the [fl
 | `--clickhouse.password` | `CLICKHOUSE_PASSWORD` | ClickHouse password for the connection. | |
 | `--clickhouse.write-timeout` | `CLICKHOUSE_WRITE_TIMEOUT` | ClickHouse write timeout for the connection. | `10` |
 | `--clickhouse.read-timeout` | `CLICKHOUSE_READ_TIMEOUT` | ClickHouse read timeout for the connection. | `10` |
+| `--clickhouse.async-insert` | `CLICKHOUSE_ASYNC_INSERT` | Enable async inserts. | `false` |
+| `--clickhouse.wait-for-async-insert` | `CLICKHOUSE_WAIT_FOR_ASYNC_INSERT` | Wait for async inserts. | `false` |
 | `--clickhouse.batch-size` | `CLICKHOUSE_BATCH_SIZE` | The size for how many log lines should be buffered, before they are written to ClickHouse. | `100000` |
 | `--clickhouse.flush-interval` | `CLICKHOUSE_FLUSH_INTERVAL` | The maximum amount of time to wait, before logs are written to ClickHouse. | `60s` |
 | `--kafka.brokers` | `KAFKA_BROKERS` | Kafka bootstrap brokers to connect to, as a comma separated list | |
