@@ -9,6 +9,7 @@ NOTE: As semantic versioning states all 0.y.z releases can contain breaking chan
 ## Unreleased
 
 - [#11](https://github.com/kobsio/fluent-bit-clickhouse/pull/11): Update Fluent Bit to version 1.8.9.
+- [#12](https://github.com/kobsio/fluent-bit-clickhouse/pull/12): Add support for [async inserts](https://clickhouse.com/blog/en/2021/clickhouse-v21.11-released/#async-inserts).
 
 ## [v0.5.2](https://github.com/kobsio/fluent-bit-clickhouse/releases/tag/v0.5.2) (2021-10-21)
 

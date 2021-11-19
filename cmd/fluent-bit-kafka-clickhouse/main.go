@@ -18,23 +18,25 @@ import (
 )
 
 var (
-	log                     = logrus.WithFields(logrus.Fields{"package": "main"})
-	clickhouseAddress       string
-	clickhouseUsername      string
-	clickhousePassword      string
-	clickhouseDatabase      string
-	clickhouseWriteTimeout  string
-	clickhouseReadTimeout   string
-	clickhouseBatchSize     int64
-	clickhouseFlushInterval time.Duration
-	kafkaBrokers            string
-	kafkaGroup              string
-	kafkaVersion            string
-	kafkaTopics             string
-	kafkaTimestampKey       string
-	logFormat               string
-	logLevel                string
-	showVersion             bool
+	log                          = logrus.WithFields(logrus.Fields{"package": "main"})
+	clickhouseAddress            string
+	clickhouseUsername           string
+	clickhousePassword           string
+	clickhouseDatabase           string
+	clickhouseWriteTimeout       string
+	clickhouseReadTimeout        string
+	clickhouseAsyncInsert        bool
+	clickhouseWaitForAsyncInsert bool
+	clickhouseBatchSize          int64
+	clickhouseFlushInterval      time.Duration
+	kafkaBrokers                 string
+	kafkaGroup                   string
+	kafkaVersion                 string
+	kafkaTopics                  string
+	kafkaTimestampKey            string
+	logFormat                    string
+	logLevel                     string
+	showVersion                  bool
 )
 
 // init is used to set the defaults for all configuration parameters and to set all flags and environment variables, for
@@ -68,6 +70,24 @@ func init() {
 	defaultClickHouseReadTimeout := "10"
 	if os.Getenv("CLICKHOUSE_READ_TIMEOUT") != "" {
 		defaultClickHouseReadTimeout = os.Getenv("CLICKHOUSE_READ_TIMEOUT")
+	}
+
+	defaultClickHouseAsyncInsert := false
+	if os.Getenv("CLICKHOUSE_ASYNC_INSERT") != "" {
+		defaultClickHouseAsyncInsertString := os.Getenv("CLICKHOUSE_ASYNC_INSERT")
+		defaultClickHouseAsyncInsertParsed, err := strconv.ParseBool(defaultClickHouseAsyncInsertString)
+		if err != nil {
+			defaultClickHouseAsyncInsert = defaultClickHouseAsyncInsertParsed
+		}
+	}
+
+	defaultClickHouseWaitForAsyncInsert := false
+	if os.Getenv("CLICKHOUSE_WAIT_FOR_ASYNC_INSERT") != "" {
+		defaultClickHouseWaitForAsyncInsertString := os.Getenv("CLICKHOUSE_WAIT_FOR_ASYNC_INSERT")
+		defaultClickHouseWaitForAsyncInsertParsed, err := strconv.ParseBool(defaultClickHouseWaitForAsyncInsertString)
+		if err != nil {
+			defaultClickHouseWaitForAsyncInsert = defaultClickHouseWaitForAsyncInsertParsed
+		}
 	}
 
 	defaultClickHouseBatchSize := int64(100000)
@@ -129,6 +149,8 @@ func init() {
 	flag.StringVar(&clickhouseDatabase, "clickhouse.database", defaultClickHouseDatabase, "ClickHouse database name")
 	flag.StringVar(&clickhouseWriteTimeout, "clickhouse.write-timeout", defaultClickHouseWriteTimeout, "ClickHouse write timeout for the connection")
 	flag.StringVar(&clickhouseReadTimeout, "clickhouse.read-timeout", defaultClickHouseReadTimeout, "ClickHouse read timeout for the connection")
+	flag.BoolVar(&clickhouseAsyncInsert, "clickhouse.async-insert", defaultClickHouseAsyncInsert, "Enable async inserts")
+	flag.BoolVar(&clickhouseWaitForAsyncInsert, "clickhouse.wait-for-async-insert", defaultClickHouseWaitForAsyncInsert, "Wait for async inserts")
 	flag.Int64Var(&clickhouseBatchSize, "clickhouse.batch-size", defaultClickHouseBatchSize, "The size for how many log lines should be buffered, before they are written to ClickHouse")
 	flag.DurationVar(&clickhouseFlushInterval, "clickhouse.flush-interval", defaultClickHouseFlushInterval, "The maximum amount of time to wait, before logs are written to ClickHouse")
 
@@ -208,7 +230,7 @@ func main() {
 	// Create a new client for the configured ClickHouse instance. Then pass the ClickHouse client to the Run function
 	// of the Kafka package, which listens for message in the configured Kafka instance. These messages are then written
 	// to ClickHouse via the created ClickHouse client.
-	client, err := clickhouse.NewClient(clickhouseAddress, clickhouseUsername, clickhousePassword, clickhouseDatabase, clickhouseWriteTimeout, clickhouseReadTimeout)
+	client, err := clickhouse.NewClient(clickhouseAddress, clickhouseUsername, clickhousePassword, clickhouseDatabase, clickhouseWriteTimeout, clickhouseReadTimeout, clickhouseAsyncInsert, clickhouseWaitForAsyncInsert)
 	if err != nil {
 		log.WithError(err).Fatalf("could not create ClickHouse client")
 	}

@@ -58,6 +58,14 @@ func FLBPluginInit(plugin unsafe.Pointer) int {
 		})
 	}
 
+	logLevel := output.FLBPluginConfigKey(plugin, "log_level")
+	lvl, err := logrus.ParseLevel(logLevel)
+	if err != nil {
+		logrus.SetLevel(logrus.InfoLevel)
+	} else {
+		logrus.SetLevel(lvl)
+	}
+
 	log.WithFields(version.Info()).Infof("Version information")
 	log.WithFields(version.BuildContext()).Infof("Build context")
 
@@ -88,6 +96,20 @@ func FLBPluginInit(plugin unsafe.Pointer) int {
 	}
 	log.WithFields(logrus.Fields{"readTimeout": readTimeout}).Infof("set readTimeout")
 
+	asyncInsertStr := output.FLBPluginConfigKey(plugin, "async_insert")
+	var asyncInsert bool
+	if asyncInsertStr == "true" {
+		asyncInsert = true
+	}
+	log.WithFields(logrus.Fields{"asyncInsert": asyncInsert}).Infof("set asyncInsert")
+
+	waitForAsyncInsertStr := output.FLBPluginConfigKey(plugin, "wait_for_async_insert")
+	var waitForAsyncInsert bool
+	if waitForAsyncInsertStr == "true" {
+		waitForAsyncInsert = true
+	}
+	log.WithFields(logrus.Fields{"waitForAsyncInsert": waitForAsyncInsert}).Infof("set waitForAsyncInsert")
+
 	batchSizeStr := output.FLBPluginConfigKey(plugin, "batch_size")
 	batchSize, err = strconv.ParseInt(batchSizeStr, 10, 64)
 	if err != nil || batchSize < 0 {
@@ -104,7 +126,7 @@ func FLBPluginInit(plugin unsafe.Pointer) int {
 	}
 	log.WithFields(logrus.Fields{"flushInterval": flushInterval}).Infof("set flushInterval")
 
-	clickhouseClient, err := clickhouse.NewClient(address, username, password, database, writeTimeout, readTimeout)
+	clickhouseClient, err := clickhouse.NewClient(address, username, password, database, writeTimeout, readTimeout, asyncInsert, waitForAsyncInsert)
 	if err != nil {
 		log.WithError(err).Errorf("could not create ClickHouse client")
 		return output.FLB_ERROR
