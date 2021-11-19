@@ -8,6 +8,8 @@ NOTE: As semantic versioning states all 0.y.z releases can contain breaking chan
 
 ## Unreleased
 
+## [v0.6.0](https://github.com/kobsio/klogs/releases/tag/v0.6.0) (2021-11-19)
+
 - [#11](https://github.com/kobsio/klogs/pull/11): Update Fluent Bit to version 1.8.9.
 - [#12](https://github.com/kobsio/klogs/pull/12): Add support for [async inserts](https://clickhouse.com/blog/en/2021/clickhouse-v21.11-released/#async-inserts).
 - [#13](https://github.com/kobsio/klogs/pull/13): Add GitHub Action to run tests and build on every push.
