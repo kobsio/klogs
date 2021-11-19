@@ -8,8 +8,8 @@ on:
       - v*
 
 jobs:
-  fluent-bit-clickhouse:
-    name: Fluent Bit -> Clickhouse
+  plugin:
+    name: Plugin
     runs-on: ubuntu-20.04
     steps:
       - name: Checkout
@@ -44,12 +44,12 @@ jobs:
         with:
           push: true
           context: .
-          file: ./cmd/fluent-bit-clickhouse/Dockerfile
+          file: ./cmd/plugin/Dockerfile
           platforms: linux/amd64,linux/arm,linux/arm64
-          tags: kobsio/fluent-bit-clickhouse:${{ steps.tag.outputs.tag }}
+          tags: kobsio/klogs:${{ steps.tag.outputs.tag }}-plugin
 
-  fluent-bit-kafka-clickhouse:
-    name: Fluent Bit -> Kafka -> Clickhouse
+  ingester:
+    name: Ingester
     runs-on: ubuntu-20.04
     steps:
       - name: Checkout
@@ -84,6 +84,6 @@ jobs:
         with:
           push: true
           context: .
-          file: ./cmd/fluent-bit-kafka-clickhouse/Dockerfile
+          file: ./cmd/ingester/Dockerfile
           platforms: linux/amd64,linux/arm,linux/arm64
-          tags: kobsio/fluent-bit-clickhouse:${{ steps.tag.outputs.tag }}-kafka
+          tags: kobsio/klogs:${{ steps.tag.outputs.tag }}-ingester
