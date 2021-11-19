@@ -3,7 +3,7 @@ WORKDIR /root
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
-RUN make build-fluent-bit-clickhouse
+RUN make build-plugin
 
 FROM fluent/fluent-bit:1.8.9
 COPY --from=build /root/out_clickhouse.so /fluent-bit/bin/

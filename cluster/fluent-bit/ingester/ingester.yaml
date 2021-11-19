@@ -2,25 +2,25 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: fluent-bit-kafka-clickhouse
+  name: ingester
   namespace: fluent-bit
   labels:
-    app: fluent-bit-kafka-clickhouse
+    app: ingester
 spec:
   replicas: 1
   strategy:
     type: Recreate
   selector:
     matchLabels:
-      app: fluent-bit-kafka-clickhouse
+      app: ingester
   template:
     metadata:
       labels:
-        app: fluent-bit-kafka-clickhouse
+        app: ingester
     spec:
       containers:
-        - name: fluent-bit-kafka-clickhouse
-          image: localhost:5000/fluent-bit-clickhouse:latest-kafka
+        - name: ingester
+          image: localhost:5000/klogs:latest-ingester
           imagePullPolicy: Always
           args:
             - --clickhouse.address=clickhouse-clickhouse.clickhouse.svc.cluster.local:9000

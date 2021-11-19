@@ -1,12 +1,12 @@
-# Fluent Bit -> Kafka -> ClickHouse
+# ClickHouse Ingester
 
-The Fluent Bit Kafka ClickHouse connector can be used to ingest the logs from Kafka into ClickHouse. To write the logs from Fluent Bit into Kafka the official [Kafka output plugin](https://docs.fluentbit.io/manual/pipeline/outputs/kafka) can be used.
+The ClickHouse ingester can be used to write logs from Kafka into ClickHouse. To write the logs from Fluent Bit into Kafka the official [Kafka output plugin](https://docs.fluentbit.io/manual/pipeline/outputs/kafka) can be used.
 
-![Fluent Bit -> Kafka -> ClickHouse](../../assets/fluent-bit-kafka-clickhouse.png)
+![Ingester](../../assets/ingester.png)
 
 ## Configuration
 
-An example Deployment for the Kafka ClickHouse connector can be found in the [fluent-bit-kafka-clickhouse.yaml](../../cluster/fluent-bit/kafka/fluent-bit-kafka-clickhouse.yaml) file. The following command-line flags and environment variables can be used to configure the connector:
+An example Deployment for the ClickHouse ingester can be found in the [ingester.yaml](../../cluster/fluent-bit/ingester/ingester.yaml) file. The following command-line flags and environment variables can be used to configure the ingester:
 
 | Command-Line Flag | Environment Variable | Description | Default |
 | ----------------- | -------------------- | ----------- | ------- |
@@ -38,11 +38,11 @@ We are using [kind](https://kind.sigs.k8s.io/docs/user/quick-start/) for local d
 Once the cluster is running we can build and push the Docker image for Fluent Bit:
 
 ```sh
-docker build -f cmd/fluent-bit-kafka-clickhouse/Dockerfile -t localhost:5000/fluent-bit-clickhouse:latest-kafka .
-docker push localhost:5000/fluent-bit-clickhouse:latest-kafka
+docker build -f cmd/ingester/Dockerfile -t localhost:5000/klogs:latest-ingester .
+docker push localhost:5000/klogs:latest-ingester
 
 # To run the Docker image locally, the following command can be used:
-docker run -it --rm localhost:5000/fluent-bit-clickhouse:latest-kafka
+docker run -it --rm localhost:5000/klogs:latest-ingester
 ```
 
 In the next step we have to create our ClickHouse cluster via the [ClickHouse Operator](https://github.com/Altinity/clickhouse-operator). To do that we can deploy all the files from the `cluster/clickhouse-operator` and `cluster/clickhouse` folder:
@@ -59,16 +59,16 @@ k exec -n clickhouse -it chi-clickhouse-sharded-0-0-0 -c clickhouse -- clickhous
 k exec -n clickhouse -it chi-clickhouse-sharded-1-0-0 -c clickhouse -- clickhouse-client
 ```
 
-Before we can deploy Fluent Bit and the Kafka to ClickHouse connector, we have to deploy Kafka using the following command:
+Before we can deploy Fluent Bit and the ingester, we have to deploy Kafka using the following command:
 
 ```sh
 k apply -f cluster/kafka
 ```
 
-Now we can deploy Fluent Bit to ingest all logs into Kafka and the Kafka to ClickHouse connector to write the logs from Kafka into ClickHouse:
+Now we can deploy Fluent Bit to ingest all logs into Kafka and the ingester to write the logs from Kafka into ClickHouse:
 
 ```sh
-k apply -f cluster/fluent-bit/kafka
+k apply -f cluster/fluent-bit/ingester
 k logs -n fluent-bit -l app=fluent-bit -f
 ```
 

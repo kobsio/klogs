@@ -1,12 +1,12 @@
-# Fluent Bit -> ClickHouse
+# Fluent Bit Plugin
 
 The Fluent Bit output plugin for ClickHouse can be used to write the collected logs from Fluent Bit into ClickHouse.
 
-![Fluent Bit -> ClickHouse](../../assets/fluent-bit-clickhouse.png)
+![plugin](../../assets/plugin.png)
 
 ## Configuration
 
-An example configuration file can be found in the [fluent-bit-cm.yaml](../../cluster/fluent-bit/clickhouse/fluent-bit-cm.yaml) ConfigMap. The following options are available:
+An example configuration file can be found in the [fluent-bit-cm.yaml](../../cluster/fluent-bit/plugin/fluent-bit-cm.yaml) ConfigMap. The following options are available:
 
 | Option | Description | Default |
 | ------ | ----------- | ------- |
@@ -34,11 +34,11 @@ We are using [kind](https://kind.sigs.k8s.io/docs/user/quick-start/) for local d
 Once the cluster is running we can build and push the Docker image for Fluent Bit:
 
 ```sh
-docker build -f cmd/fluent-bit-clickhouse/Dockerfile -t localhost:5000/fluent-bit-clickhouse:latest .
-docker push localhost:5000/fluent-bit-clickhouse:latest
+docker build -f cmd/plugin/Dockerfile -t localhost:5000/klogs:latest-plugin .
+docker push localhost:5000/klogs:latest-plugin
 
 # To run the Docker image locally, the following command can be used:
-docker run -it --rm localhost:5000/fluent-bit-clickhouse:latest
+docker run -it --rm localhost:5000/klogs:latest-plugin
 ```
 
 In the next step we have to create our ClickHouse cluster via the [ClickHouse Operator](https://github.com/Altinity/clickhouse-operator). To do that we can deploy all the files from the `cluster/clickhouse-operator` and `cluster/clickhouse` folder:
@@ -58,7 +58,7 @@ k exec -n clickhouse -it chi-clickhouse-sharded-1-0-0 -c clickhouse -- clickhous
 Now we can deploy Fluent Bit to ingest all logs into ClickHouse:
 
 ```sh
-k apply -f cluster/fluent-bit/clickhouse
+k apply -f cluster/fluent-bit/plugin
 k logs -n fluent-bit -l app=fluent-bit -f
 ```
 
