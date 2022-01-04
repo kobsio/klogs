@@ -18,6 +18,8 @@ spec:
       - name: sharded
         layout:
           shardsCount: 2
+          replicasCount: 1
+
     users:
       admin/password: admin
       admin/networks/ip: "::/0"
@@ -56,4 +58,4 @@ spec:
             - name: dockerhub-registry
           containers:
             - name: clickhouse
-              image: yandex/clickhouse-server:21.11.4.14
+              image: yandex/clickhouse-server:21.12.3.32
