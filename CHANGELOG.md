@@ -9,6 +9,7 @@ NOTE: As semantic versioning states all 0.y.z releases can contain breaking chan
 ## Unreleased
 
 - [#15](https://github.com/kobsio/klogs/pull/15): Update the used SQL schema to use `ReplicatedMergeTree` instead of `MergeTree`.
+- [#16](https://github.com/kobsio/klogs/pull/16): Update Fluent Bit to version 1.8.11.
 
 ## [v0.6.0](https://github.com/kobsio/klogs/releases/tag/v0.6.0) (2021-11-19)
 
