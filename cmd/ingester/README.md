@@ -24,8 +24,8 @@ An example Deployment for the ClickHouse ingester can be found in the [ingester.
 | `--kafka.group` | `KAFKA_GROUP` | Kafka consumer group definition | `kafka-clickhouse` |
 | `--kafka.version` | `KAFKA_VERSION` | Kafka cluster version | `2.1.1` |
 | `--kafka.topics` | `KAFKA_TOPICS` | Kafka topics to be consumed, as a comma separated list | `fluent-bit` |
-| `--log.format` | `LOG_FORMAT` | The log format. Must be `plain` or `json`. | `plain` |
-| `--log.level` | `LOG_LEVEL` | The log level. Must be `trace`, `debug`, `info`, `warn`, `error`, `fatal` or `panic`. | `info` |
+| `--log.format` | `LOG_FORMAT` | The log format. Must be `console` or `json`. | `console` |
+| `--log.level` | `LOG_LEVEL` | The log level. Must be `debug`, `info`, `warn`, `error`, `fatal` or `panic`. | `info` |
 
 ## Development
 

@@ -9,10 +9,12 @@ import (
 
 	"github.com/kobsio/fluent-bit-clickhouse/pkg/clickhouse"
 	flatten "github.com/kobsio/fluent-bit-clickhouse/pkg/flatten/string"
+	"github.com/kobsio/fluent-bit-clickhouse/pkg/log"
 
 	"github.com/Shopify/sarama"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	"go.uber.org/zap"
 )
 
 var (
@@ -61,12 +63,12 @@ func (consumer *Consumer) ConsumeClaim(session sarama.ConsumerGroupSession, clai
 
 		err := json.Unmarshal(message.Value, &record)
 		if err != nil {
-			log.WithError(err).Errorf("could not unmarshal log line")
+			log.Error(nil, "Could not unmarshal log line", zap.Error(err))
 		}
 
 		data, err := flatten.Flatten(record)
 		if err != nil {
-			log.WithError(err).Errorf("could not flat data")
+			log.Error(nil, "Could not flat data", zap.Error(err))
 			break
 		}
 
@@ -123,7 +125,7 @@ func (consumer *Consumer) ConsumeClaim(session sarama.ConsumerGroupSession, clai
 			case consumer.timestampKey:
 				parsedTime, err := strconv.ParseFloat(stringValue, 64)
 				if err != nil {
-					log.WithError(err).Warnf("could not parse timestamp")
+					log.Warn(nil, "Could not parse timestamp, defaulting to now", zap.Error(err))
 					row.Timestamp = time.Now()
 				} else {
 					sec, dec := math.Modf(parsedTime)
@@ -165,7 +167,7 @@ func (consumer *Consumer) ConsumeClaim(session sarama.ConsumerGroupSession, clai
 
 			err := consumer.clickhouseClient.Write(consumer.buffer)
 			if err != nil {
-				log.WithError(err).Errorf("could not write buffer")
+				log.Error(nil, "Could nor write buffer", zap.Error(err))
 			} else {
 				consumer.buffer = make([]clickhouse.Row, 0)
 				consumer.lastFlush = time.Now()
