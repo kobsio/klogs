@@ -10,13 +10,10 @@ import (
 	"time"
 
 	"github.com/kobsio/fluent-bit-clickhouse/pkg/clickhouse"
+	"github.com/kobsio/fluent-bit-clickhouse/pkg/log"
 
 	"github.com/Shopify/sarama"
-	"github.com/sirupsen/logrus"
-)
-
-var (
-	log = logrus.WithFields(logrus.Fields{"package": "kafka"})
+	"go.uber.org/zap"
 )
 
 // Run creates a new client for the given Kafka configuration and listens for incomming messages. These messages are
@@ -24,7 +21,7 @@ var (
 func Run(kafkaBrokers, kafkaGroup, kafkaVersion, kafkaTopics, kafkaTimestampKey string, clickhouseBatchSize int64, clickhouseFlushInterval time.Duration, clickhouseClient *clickhouse.Client) {
 	version, err := sarama.ParseKafkaVersion(kafkaVersion)
 	if err != nil {
-		log.WithError(err).Fatalf("error parsing Kafka version")
+		log.Fatal(nil, "Error parsing Kafka version", zap.Error(err))
 	}
 
 	config := sarama.NewConfig()
@@ -45,7 +42,7 @@ func Run(kafkaBrokers, kafkaGroup, kafkaVersion, kafkaTopics, kafkaTimestampKey 
 	ctx, cancel := context.WithCancel(context.Background())
 	client, err := sarama.NewConsumerGroup(strings.Split(kafkaBrokers, ","), kafkaGroup, config)
 	if err != nil {
-		log.WithError(err).Fatalf("error creating consumer group client")
+		log.Fatal(nil, "Error creating consumer group client", zap.Error(err))
 	}
 
 	wg := &sync.WaitGroup{}
@@ -56,7 +53,7 @@ func Run(kafkaBrokers, kafkaGroup, kafkaVersion, kafkaTopics, kafkaTimestampKey 
 			// `Consume` should be called inside an infinite loop, when a server-side rebalance happens, the consumer
 			// session will need to be recreated to get the new claims.
 			if err := client.Consume(ctx, strings.Split(kafkaTopics, ","), &consumer); err != nil {
-				log.WithError(err).Fatalf("error from consumer")
+				log.Fatal(nil, "Error from consumer", zap.Error(err))
 			}
 			// Check if context was cancelled, signaling that the consumer should stop.
 			if ctx.Err() != nil {
@@ -67,19 +64,19 @@ func Run(kafkaBrokers, kafkaGroup, kafkaVersion, kafkaTopics, kafkaTimestampKey 
 	}()
 
 	<-consumer.ready
-	log.Infof("sarama consumer up and running")
+	log.Info(nil, "Sarama consumer up and running")
 
 	sigterm := make(chan os.Signal, 1)
 	signal.Notify(sigterm, syscall.SIGINT, syscall.SIGTERM)
 	select {
 	case <-ctx.Done():
-		log.Infof("terminating: context cancelled")
+		log.Info(nil, "Terminating: context cancelled")
 	case <-sigterm:
-		log.Infof("terminating: via signal")
+		log.Info(nil, "Terminating: via signal")
 	}
 	cancel()
 	wg.Wait()
 	if err = client.Close(); err != nil {
-		log.WithError(err).Fatalf("error closing client")
+		log.Fatal(nil, "Error closing client", zap.Error(err))
 	}
 }

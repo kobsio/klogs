@@ -5,12 +5,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/ClickHouse/clickhouse-go"
-	"github.com/sirupsen/logrus"
-)
+	"github.com/kobsio/fluent-bit-clickhouse/pkg/log"
 
-var (
-	log = logrus.WithFields(logrus.Fields{"package": "clickhouse"})
+	"github.com/ClickHouse/clickhouse-go"
+	"go.uber.org/zap"
 )
 
 // FieldString is the structure of the nested field for string values.
@@ -63,13 +61,13 @@ func (c *Client) Write(buffer []Row) error {
 
 	tx, err := c.client.Begin()
 	if err != nil {
-		log.WithError(err).Errorf("begin transaction failure")
+		log.Error(nil, "Begin transaction failure", zap.Error(err))
 		return err
 	}
 
 	smt, err := tx.Prepare(sql)
 	if err != nil {
-		log.WithError(err).Errorf("prepare statement failure")
+		log.Error(nil, "Prepare statement failure", zap.Error(err))
 		return err
 	}
 
@@ -77,13 +75,13 @@ func (c *Client) Write(buffer []Row) error {
 		_, err = smt.Exec(l.Timestamp, l.Cluster, l.Namespace, l.App, l.Pod, l.Container, l.Host, l.FieldsString.Key, l.FieldsString.Value, l.FieldsNumber.Key, l.FieldsNumber.Value, l.Log)
 
 		if err != nil {
-			log.WithError(err).Errorf("statement exec failure")
+			log.Error(nil, "Statement exec failure", zap.Error(err))
 			return err
 		}
 	}
 
 	if err = tx.Commit(); err != nil {
-		log.WithError(err).Errorf("commit failed failure")
+		log.Error(nil, "Commit failed failure", zap.Error(err))
 		return err
 	}
 
@@ -97,15 +95,15 @@ func NewClient(address, username, password, database, writeTimeout, readTimeout 
 
 	connect, err := sql.Open("clickhouse", dns)
 	if err != nil {
-		log.WithError(err).Errorf("could not initialize database connection")
+		log.Error(nil, "could not initialize database connection", zap.Error(err))
 		return nil, err
 	}
 
 	if err := connect.Ping(); err != nil {
 		if exception, ok := err.(*clickhouse.Exception); ok {
-			log.Errorf("[%d] %s \n%s\n", exception.Code, exception.Message, exception.StackTrace)
+			log.Error(nil, fmt.Sprintf("[%d] %s \n%s\n", exception.Code, exception.Message, exception.StackTrace))
 		} else {
-			log.WithError(err).Errorf("could not ping database")
+			log.Error(nil, "could not ping database", zap.Error(err))
 		}
 
 		return nil, err

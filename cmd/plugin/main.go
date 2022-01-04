@@ -14,10 +14,12 @@ import (
 
 	"github.com/kobsio/fluent-bit-clickhouse/pkg/clickhouse"
 	flatten "github.com/kobsio/fluent-bit-clickhouse/pkg/flatten/interface"
+	"github.com/kobsio/fluent-bit-clickhouse/pkg/log"
 	"github.com/kobsio/fluent-bit-clickhouse/pkg/version"
 
 	"github.com/fluent/fluent-bit-go/output"
-	"github.com/sirupsen/logrus"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 const (
@@ -29,8 +31,6 @@ const (
 )
 
 var (
-	log = logrus.WithFields(logrus.Fields{"package": "clickhouse"})
-
 	database      string
 	batchSize     int64
 	flushInterval time.Duration
@@ -48,87 +48,98 @@ func FLBPluginRegister(def unsafe.Pointer) int {
 func FLBPluginInit(plugin unsafe.Pointer) int {
 	var err error
 
+	// Configure our logging library. The logs can be written in console format (the console format is compatible with
+	// logfmt) or in json format. The default is console, because it is better to read during development. In a
+	// production environment you should consider to use json, so that the logs can be parsed by a logging system like
+	// Elasticsearch.
+	// Next to the log format it is also possible to configure the log leven. The accepted values are "debug", "info",
+	// "warn", "error", "fatal" and "panic". The default log level is "info".
 	logFormat := output.FLBPluginConfigKey(plugin, "log_format")
-
-	if logFormat == "json" {
-		logrus.SetFormatter(&logrus.JSONFormatter{})
-	} else {
-		logrus.SetFormatter(&logrus.TextFormatter{
-			FullTimestamp: true,
-		})
+	if logFormat != "json" {
+		logFormat = "console"
 	}
 
 	logLevel := output.FLBPluginConfigKey(plugin, "log_level")
-	lvl, err := logrus.ParseLevel(logLevel)
-	if err != nil {
-		logrus.SetLevel(logrus.InfoLevel)
-	} else {
-		logrus.SetLevel(lvl)
+
+	zapEncoderCfg := zap.NewProductionEncoderConfig()
+	zapEncoderCfg.TimeKey = "timestamp"
+	zapEncoderCfg.EncodeTime = zapcore.ISO8601TimeEncoder
+
+	zapConfig := zap.Config{
+		Level:            log.ParseLevel(logLevel),
+		Development:      false,
+		Encoding:         logFormat,
+		EncoderConfig:    zapEncoderCfg,
+		OutputPaths:      []string{"stderr"},
+		ErrorOutputPaths: []string{"stderr"},
+		Sampling: &zap.SamplingConfig{
+			Initial:    100,
+			Thereafter: 100,
+		},
 	}
 
-	log.WithFields(version.Info()).Infof("Version information")
-	log.WithFields(version.BuildContext()).Infof("Build context")
+	logger, err := zapConfig.Build()
+	if err != nil {
+		panic(err)
+	}
+	defer logger.Sync()
+
+	zap.ReplaceGlobals(logger)
+	log.Info(nil, "Version information", version.Info()...)
+	log.Info(nil, "Build context", version.BuildContext()...)
 
 	address := output.FLBPluginConfigKey(plugin, "address")
-	log.WithFields(logrus.Fields{"address": address}).Infof("set address")
 
 	database = output.FLBPluginConfigKey(plugin, "database")
 	if database == "" {
 		database = defaultDatabase
 	}
-	log.WithFields(logrus.Fields{"database": database}).Infof("set database")
 
 	username := output.FLBPluginConfigKey(plugin, "username")
-	log.WithFields(logrus.Fields{"username": username}).Infof("set username")
 
 	password := output.FLBPluginConfigKey(plugin, "password")
-	log.WithFields(logrus.Fields{"password": "*****"}).Infof("set password")
 
 	writeTimeout := output.FLBPluginConfigKey(plugin, "write_timeout")
 	if writeTimeout == "" {
 		writeTimeout = defaultReadTimeout
 	}
-	log.WithFields(logrus.Fields{"writeTimeout": writeTimeout}).Infof("set writeTimeout")
 
 	readTimeout := output.FLBPluginConfigKey(plugin, "read_timeout")
 	if readTimeout == "" {
 		readTimeout = defaultReadTimeout
 	}
-	log.WithFields(logrus.Fields{"readTimeout": readTimeout}).Infof("set readTimeout")
 
 	asyncInsertStr := output.FLBPluginConfigKey(plugin, "async_insert")
 	var asyncInsert bool
 	if asyncInsertStr == "true" {
 		asyncInsert = true
 	}
-	log.WithFields(logrus.Fields{"asyncInsert": asyncInsert}).Infof("set asyncInsert")
 
 	waitForAsyncInsertStr := output.FLBPluginConfigKey(plugin, "wait_for_async_insert")
 	var waitForAsyncInsert bool
 	if waitForAsyncInsertStr == "true" {
 		waitForAsyncInsert = true
 	}
-	log.WithFields(logrus.Fields{"waitForAsyncInsert": waitForAsyncInsert}).Infof("set waitForAsyncInsert")
 
 	batchSizeStr := output.FLBPluginConfigKey(plugin, "batch_size")
 	batchSize, err = strconv.ParseInt(batchSizeStr, 10, 64)
 	if err != nil || batchSize < 0 {
-		log.WithError(err).Errorf("could not parse batchSize setting, use default setting %d", defaultBatchSize)
+		log.Warn(nil, "Could not parse batchSize setting, use default setting", zap.Error(err), zap.Int64("default", defaultBatchSize))
 		batchSize = defaultBatchSize
 	}
-	log.WithFields(logrus.Fields{"batchSize": batchSize}).Infof("set batchSize")
 
 	flushIntervalStr := output.FLBPluginConfigKey(plugin, "flush_interval")
 	flushInterval, err = time.ParseDuration(flushIntervalStr)
 	if err != nil || flushInterval < 1*time.Second {
-		log.WithError(err).Errorf("could not parse flushInterval setting, use default setting %s", defaultFlushInterval)
+		log.Warn(nil, "Could not parse flushInterval setting, use default setting", zap.Error(err), zap.Duration("default", defaultFlushInterval))
 		flushInterval = defaultFlushInterval
 	}
-	log.WithFields(logrus.Fields{"flushInterval": flushInterval}).Infof("set flushInterval")
+
+	log.Info(nil, "Clickhouse configuration", zap.String("clickhouseAddress", address), zap.String("clickhouseUsername", username), zap.String("clickhousePassword", "*****"), zap.String("clickhouseDatabase", database), zap.String("clickhouseWriteTimeout", writeTimeout), zap.String("clickhouseReadTimeout", readTimeout), zap.Int64("clickhouseBatchSize", batchSize), zap.Duration("clickhouseFlushInterval", flushInterval))
 
 	clickhouseClient, err := clickhouse.NewClient(address, username, password, database, writeTimeout, readTimeout, asyncInsert, waitForAsyncInsert)
 	if err != nil {
-		log.WithError(err).Errorf("could not create ClickHouse client")
+		log.Fatal(nil, "Could not create ClickHouse client", zap.Error(err))
 		return output.FLB_ERROR
 	}
 
@@ -139,7 +150,7 @@ func FLBPluginInit(plugin unsafe.Pointer) int {
 
 //export FLBPluginFlush
 func FLBPluginFlush(data unsafe.Pointer, length C.int, tag *C.char) int {
-	log.Errorf("flush called for unknown instance")
+	log.Error(nil, "Flush called for unknown instance")
 	return output.FLB_OK
 }
 
@@ -160,13 +171,13 @@ func FLBPluginFlushCtx(ctx, data unsafe.Pointer, length C.int, tag *C.char) int 
 		case uint64:
 			timestamp = time.Unix(int64(t), 0)
 		default:
-			log.Warnf("time provided invalid, defaulting to now.")
+			log.Warn(nil, "The provided time is invalid, defaulting to now")
 			timestamp = time.Now()
 		}
 
 		data, err := flatten.Flatten(record)
 		if err != nil {
-			log.WithError(err).Errorf("could not flat data")
+			log.Error(nil, "Could not flatten data", zap.Error(err))
 			break
 		}
 
@@ -257,19 +268,19 @@ func FLBPluginFlushCtx(ctx, data unsafe.Pointer, length C.int, tag *C.char) int 
 		return output.FLB_OK
 	}
 
-	log.WithFields(logrus.Fields{"batchSize": len(buffer), "flushInterval": startFlushTime.Sub(lastFlush)}).Infof("start flushing")
+	log.Info(nil, "Start flushing", zap.Int("batchSize", len(buffer)), zap.Duration("flushInterval", startFlushTime.Sub(lastFlush)))
 	client.Write(buffer)
 
 	lastFlush = time.Now()
 	buffer = make([]clickhouse.Row, 0)
-	log.WithFields(logrus.Fields{"flushTime": lastFlush.Sub(startFlushTime)}).Infof("end flushing")
+	log.Info(nil, "End flushing", zap.Duration("flushTime", lastFlush.Sub(startFlushTime)))
 
 	return output.FLB_OK
 }
 
 //export FLBPluginExit
 func FLBPluginExit() int {
-	log.Errorf("exit called for unknown instance")
+	log.Error(nil, "Exit called for unknown instance")
 	return output.FLB_OK
 }
 

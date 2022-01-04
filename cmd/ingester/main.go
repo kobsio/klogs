@@ -10,15 +10,16 @@ import (
 
 	"github.com/kobsio/fluent-bit-clickhouse/pkg/clickhouse"
 	"github.com/kobsio/fluent-bit-clickhouse/pkg/kafka"
+	"github.com/kobsio/fluent-bit-clickhouse/pkg/log"
 	"github.com/kobsio/fluent-bit-clickhouse/pkg/version"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/sirupsen/logrus"
 	flag "github.com/spf13/pflag"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 var (
-	log                          = logrus.WithFields(logrus.Fields{"package": "main"})
 	clickhouseAddress            string
 	clickhouseUsername           string
 	clickhousePassword           string
@@ -133,7 +134,7 @@ func init() {
 		defaultKafkaTimestampKey = os.Getenv("KAFKA_TIMESTAMP_KEY")
 	}
 
-	defaultLogFormat := "plain"
+	defaultLogFormat := "console"
 	if os.Getenv("LOG_FORMAT") != "" {
 		defaultLogFormat = os.Getenv("LOG_FORMAT")
 	}
@@ -160,38 +161,44 @@ func init() {
 	flag.StringVar(&kafkaTopics, "kafka.topics", defaultKafkaTopics, "Kafka topics to be consumed, as a comma separated list")
 	flag.StringVar(&kafkaTimestampKey, "kafka.timestamp-key", defaultKafkaTimestampKey, "JSON key where the record timestamp is stored")
 
-	flag.StringVar(&logFormat, "log.format", defaultLogFormat, "Set the output format of the logs. Must be \"plain\" or \"json\".")
-	flag.StringVar(&logLevel, "log.level", defaultLogLevel, "Set the log level. Must be \"trace\", \"debug\", \"info\", \"warn\", \"error\", \"fatal\" or \"panic\".")
+	flag.StringVar(&logFormat, "log.format", defaultLogFormat, "Set the output format of the logs. Must be \"console\" or \"json\".")
+	flag.StringVar(&logLevel, "log.level", defaultLogLevel, "Set the log level. Must be \"debug\", \"info\", \"warn\", \"error\", \"fatal\" or \"panic\".")
 	flag.BoolVar(&showVersion, "version", false, "Print version information.")
 }
 
 func main() {
 	flag.Parse()
 
-	// Configure our logging library. The logs can be written in plain format (the plain format is compatible with
-	// logfmt) or in json format. The default is plain, because it is better to read during development. In a production
-	// environment you should consider to use json, so that the logs can be parsed by a logging system like
+	// Configure our logging library. The logs can be written in console format (the console format is compatible with
+	// logfmt) or in json format. The default is console, because it is better to read during development. In a
+	// production environment you should consider to use json, so that the logs can be parsed by a logging system like
 	// Elasticsearch.
-	// Next to the log format it is also possible to configure the log leven. The accepted values are "trace", "debug",
-	// "info", "warn", "error", "fatal" and "panic". The default log level is "info". When the log level is set to
-	// "trace" or "debug" we will also print the caller in the logs.
-	if logFormat == "json" {
-		logrus.SetFormatter(&logrus.JSONFormatter{})
-	} else {
-		logrus.SetFormatter(&logrus.TextFormatter{
-			FullTimestamp: true,
-		})
+	// Next to the log format it is also possible to configure the log leven. The accepted values are "debug", "info",
+	// "warn", "error", "fatal" and "panic". The default log level is "info".
+	zapEncoderCfg := zap.NewProductionEncoderConfig()
+	zapEncoderCfg.TimeKey = "timestamp"
+	zapEncoderCfg.EncodeTime = zapcore.ISO8601TimeEncoder
+
+	zapConfig := zap.Config{
+		Level:            log.ParseLevel(logLevel),
+		Development:      false,
+		Encoding:         logFormat,
+		EncoderConfig:    zapEncoderCfg,
+		OutputPaths:      []string{"stderr"},
+		ErrorOutputPaths: []string{"stderr"},
+		Sampling: &zap.SamplingConfig{
+			Initial:    100,
+			Thereafter: 100,
+		},
 	}
 
-	lvl, err := logrus.ParseLevel(logLevel)
+	logger, err := zapConfig.Build()
 	if err != nil {
-		log.WithError(err).WithFields(logrus.Fields{"log.level": logLevel}).Fatal("Could not set log level")
+		panic(err)
 	}
-	logrus.SetLevel(lvl)
+	defer logger.Sync()
 
-	if lvl == logrus.TraceLevel || lvl == logrus.DebugLevel {
-		logrus.SetReportCaller(true)
-	}
+	zap.ReplaceGlobals(logger)
 
 	// When the version value is set to "true" (--version) we will print the version information for kobs. After we
 	// printed the version information the application is stopped.
@@ -200,17 +207,17 @@ func main() {
 	if showVersion {
 		v, err := version.Print("kobs")
 		if err != nil {
-			log.WithError(err).Fatalf("Failed to print version information")
+			log.Fatal(nil, "Failed to print version information", zap.Error(err))
 		}
 
 		fmt.Fprintln(os.Stdout, v)
 		return
 	}
 
-	log.WithFields(version.Info()).Infof("Version information")
-	log.WithFields(version.BuildContext()).Infof("Build context")
-	log.WithFields(logrus.Fields{"clickhouseAddress": clickhouseAddress, "clickhouseUsername": clickhouseUsername, "clickhousePassword": "*****", "clickhouseDatabase": clickhouseDatabase, "clickhouseWriteTimeout": clickhouseWriteTimeout, "clickhouseReadTimeout": clickhouseReadTimeout, "clickhouseBatchSize": clickhouseBatchSize, "clickhouseFlushInterval": clickhouseFlushInterval}).Infof("ClickHouse configuration")
-	log.WithFields(logrus.Fields{"kafkaBrokers": kafkaBrokers, "kafkaGroup": kafkaGroup, "kafkaVersion": kafkaVersion, "kafkaTopics": kafkaTopics}).Infof("Kafka configuration")
+	log.Info(nil, "Version information", version.Info()...)
+	log.Info(nil, "Build context", version.BuildContext()...)
+	log.Info(nil, "Clickhouse configuration", zap.String("clickhouseAddress", clickhouseAddress), zap.String("clickhouseUsername", clickhouseUsername), zap.String("clickhousePassword", "*****"), zap.String("clickhouseDatabase", clickhouseDatabase), zap.String("clickhouseWriteTimeout", clickhouseWriteTimeout), zap.String("clickhouseReadTimeout", clickhouseReadTimeout), zap.Int64("clickhouseBatchSize", clickhouseBatchSize), zap.Duration("clickhouseFlushInterval", clickhouseFlushInterval))
+	log.Info(nil, "Kafka configuration", zap.String("kafkaBrokers", kafkaBrokers), zap.String("kafkaGroup", kafkaGroup), zap.String("kafkaVersion", kafkaVersion), zap.String("kafkaTopics", kafkaTopics))
 
 	// Create a http server, which can be used for the liveness and readiness probe in Kubernetes. The server also
 	// serves our Prometheus metrics.
@@ -232,7 +239,7 @@ func main() {
 	// to ClickHouse via the created ClickHouse client.
 	client, err := clickhouse.NewClient(clickhouseAddress, clickhouseUsername, clickhousePassword, clickhouseDatabase, clickhouseWriteTimeout, clickhouseReadTimeout, clickhouseAsyncInsert, clickhouseWaitForAsyncInsert)
 	if err != nil {
-		log.WithError(err).Fatalf("could not create ClickHouse client")
+		log.Fatal(nil, "Could not create ClickHouse client", zap.Error(err))
 	}
 
 	kafka.Run(kafkaBrokers, kafkaGroup, kafkaVersion, kafkaTopics, kafkaTimestampKey, clickhouseBatchSize, clickhouseFlushInterval, client)
