@@ -38,7 +38,7 @@ func TestDebug(t *testing.T) {
 	ctx := context.Background()
 
 	require.NotPanics(t, func() {
-		Debug(ctx, "Test Debug Log.")
+		Debug(ctx, "Test Debug Log")
 	})
 }
 
@@ -46,7 +46,7 @@ func TestInfo(t *testing.T) {
 	ctx := context.Background()
 
 	require.NotPanics(t, func() {
-		Info(ctx, "Test Info Log.")
+		Info(ctx, "Test Info Log")
 	})
 }
 
@@ -54,7 +54,7 @@ func TestWarn(t *testing.T) {
 	ctx := context.Background()
 
 	require.NotPanics(t, func() {
-		Warn(ctx, "Test Warn Log.")
+		Warn(ctx, "Test Warn Log")
 	})
 }
 
@@ -62,7 +62,7 @@ func TestError(t *testing.T) {
 	ctx := context.Background()
 
 	require.NotPanics(t, func() {
-		Error(ctx, "Test Error Log.")
+		Error(ctx, "Test Error Log")
 	})
 }
 
@@ -70,6 +70,6 @@ func TestPanic(t *testing.T) {
 	ctx := context.Background()
 
 	require.Panics(t, func() {
-		Panic(ctx, "Test Panic Log.")
+		Panic(ctx, "Test Panic Log")
 	})
 }
