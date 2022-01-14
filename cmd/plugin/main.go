@@ -21,6 +21,7 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
+import "strings"
 
 const (
 	defaultDatabase      string        = "logs"
@@ -31,12 +32,13 @@ const (
 )
 
 var (
-	database      string
-	batchSize     int64
-	flushInterval time.Duration
-	lastFlush     = time.Now()
-	buffer        = make([]clickhouse.Row, 0)
-	client        *clickhouse.Client
+	database          string
+	batchSize         int64
+	flushInterval     time.Duration
+	forceNumberFields []string
+	lastFlush         = time.Now()
+	buffer            = make([]clickhouse.Row, 0)
+	client            *clickhouse.Client
 )
 
 //export FLBPluginRegister
@@ -135,7 +137,10 @@ func FLBPluginInit(plugin unsafe.Pointer) int {
 		flushInterval = defaultFlushInterval
 	}
 
-	log.Info(nil, "Clickhouse configuration", zap.String("clickhouseAddress", address), zap.String("clickhouseUsername", username), zap.String("clickhousePassword", "*****"), zap.String("clickhouseDatabase", database), zap.String("clickhouseWriteTimeout", writeTimeout), zap.String("clickhouseReadTimeout", readTimeout), zap.Int64("clickhouseBatchSize", batchSize), zap.Duration("clickhouseFlushInterval", flushInterval))
+	forceNumberFieldsStr := output.FLBPluginConfigKey(plugin, "force_number_fields")
+	forceNumberFields = strings.Split(forceNumberFieldsStr, ",")
+
+	log.Info(nil, "Clickhouse configuration", zap.String("clickhouseAddress", address), zap.String("clickhouseUsername", username), zap.String("clickhousePassword", "*****"), zap.String("clickhouseDatabase", database), zap.String("clickhouseWriteTimeout", writeTimeout), zap.String("clickhouseReadTimeout", readTimeout), zap.Int64("clickhouseBatchSize", batchSize), zap.Duration("clickhouseFlushInterval", flushInterval), zap.Strings("forceNumberFields", forceNumberFields))
 
 	clickhouseClient, err := clickhouse.NewClient(address, username, password, database, writeTimeout, readTimeout, asyncInsert, waitForAsyncInsert)
 	if err != nil {
@@ -254,8 +259,19 @@ func FLBPluginFlushCtx(ctx, data unsafe.Pointer, length C.int, tag *C.char) int 
 					row.FieldsNumber.Key = append(row.FieldsNumber.Key, k)
 					row.FieldsNumber.Value = append(row.FieldsNumber.Value, numberValue)
 				} else {
-					row.FieldsString.Key = append(row.FieldsString.Key, k)
-					row.FieldsString.Value = append(row.FieldsString.Value, stringValue)
+					if contains(k, forceNumberFields) {
+						parsedNumber, err := strconv.ParseFloat(stringValue, 64)
+						if err == nil {
+							row.FieldsNumber.Key = append(row.FieldsNumber.Key, k)
+							row.FieldsNumber.Value = append(row.FieldsNumber.Value, parsedNumber)
+						} else {
+							row.FieldsString.Key = append(row.FieldsString.Key, k)
+							row.FieldsString.Value = append(row.FieldsString.Value, stringValue)
+						}
+					} else {
+						row.FieldsString.Key = append(row.FieldsString.Key, k)
+						row.FieldsString.Value = append(row.FieldsString.Value, stringValue)
+					}
 				}
 			}
 		}

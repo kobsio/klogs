@@ -62,6 +62,7 @@ data:
         Wait_For_Async_Insert true
         Batch_Size            1000
         Flush_Interval        10s
+        Force_Number_Fields   content.duration,content.upstream_service_time
         Log_Format            json
         Log_Level             debug
 
