@@ -21,17 +21,20 @@ data:
     [INPUT]
         Name              tail
         Path              /var/log/containers/*.log
-        Parser            docker
+        Multiline.Parser  docker, cri
         Tag               kube.*
         Refresh_Interval  5
-        Mem_Buf_Limit     20MB
-        Skip_Long_Lines   On
+        Buffer_Chunk_Size 256k
+        Buffer_Max_Size   256k
+        Mem_Buf_Limit     128MB
+        Skip_Long_Lines   Off
         DB                /tail-db/tail-containers-state.db
         DB.Sync           Normal
 
     [FILTER]
         Name                kubernetes
         Match               kube.*
+        Buffer_Size         256k
         Kube_Tag_Prefix     kube.var.log.containers.
         Kube_URL            https://kubernetes.default.svc:443
         Kube_CA_File        /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
@@ -59,7 +62,7 @@ data:
         Wait_For_Async_Insert true
         Batch_Size            1000
         Flush_Interval        10s
-        Log_Format            plain
+        Log_Format            json
         Log_Level             debug
 
   parsers.conf: |

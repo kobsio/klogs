@@ -19,19 +19,7 @@ spec:
       labels:
         app: zookeeper
         what: node
-      annotations:
-        sidecar.istio.io/inject: "false"
     spec:
-      affinity:
-        podAntiAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-            - labelSelector:
-                matchExpressions:
-                  - key: "app"
-                    operator: In
-                    values:
-                      - zookeeper
-              topologyKey: "kubernetes.io/hostname"
       imagePullSecrets:
         - name: dockerhub-registry
       containers:
@@ -147,9 +135,8 @@ spec:
     - metadata:
         name: datadir-volume
       spec:
-        storageClassName: managed-premium
         accessModes:
           - ReadWriteOnce
         resources:
           requests:
-            storage: 100Gi
+            storage: 5Gi
