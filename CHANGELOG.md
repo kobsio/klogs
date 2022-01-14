@@ -12,6 +12,9 @@ NOTE: As semantic versioning states all 0.y.z releases can contain breaking chan
 - [#16](https://github.com/kobsio/klogs/pull/16): Update Fluent Bit to version 1.8.11.
 - [#17](https://github.com/kobsio/klogs/pull/17): Use `go.uber.org/zap` instead of `github.com/sirupsen/logrus` for logging.
 - [#18](https://github.com/kobsio/klogs/pull/18): Update dependencies.
+- [#20](https://github.com/kobsio/klogs/pull/20): Update schema to use `LowCardinality(String)` instead of `String` and no codec or `CODEC(LZ4)` instead of `CODEC(ZSTD(1))`.
+- [#21](https://github.com/kobsio/klogs/pull/21): Fix example deployment.
+- [#22](https://github.com/kobsio/klogs/pull/22): Add new `Force_Number_Fields` / `--clickhouse.force-number-fields` options, so that users can provide a list of fields which should be parsed as number when they are logged as string.
 
 ## [v0.6.0](https://github.com/kobsio/klogs/releases/tag/v0.6.0) (2021-11-19)
 

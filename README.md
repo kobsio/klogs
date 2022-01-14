@@ -51,16 +51,16 @@ ALTER TABLE logs.logs_local ON CLUSTER '{cluster}' ADD COLUMN content_response_c
 ALTER TABLE logs.logs ON CLUSTER '{cluster}' ADD COLUMN content_response_code Float64 DEFAULT fields_number.value[indexOf(fields_number.key, 'content.response_code')]
 ```
 
-But those columns will be materialized only for new data and after merges.
-In order to materialize those columns for old data:
-you can use `ALTER TABLE MATERIALIZE COLUMN` for ClickHouse version > 21.10. 
+But those columns will be materialized only for new data and after merges. In order to materialize those columns for old data:
+
+- You can use `ALTER TABLE MATERIALIZE COLUMN` for ClickHouse version > 21.10.
 
 ```sql
 ALTER TABLE logs.logs_local ON CLUSTER '{cluster}' MATERIALIZE COLUMN content_level;
 ALTER TABLE logs.logs_local ON CLUSTER '{cluster}' MATERIALIZE COLUMN content_response_code;
 ```
 
-Or for older ClickHouse versions, `ALTER TABLE UPDATE`.
+- Or for older ClickHouse versions, `ALTER TABLE UPDATE`.
 
 ```sql
 ALTER TABLE logs.logs_local ON CLUSTER '{cluster}' UPDATE content_level = content_level WHERE 1;
