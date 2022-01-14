@@ -32,13 +32,14 @@ var (
 
 // Consumer represents a Sarama consumer group consumer.
 type Consumer struct {
-	ready                   chan bool
-	timestampKey            string
-	lastFlush               time.Time
-	clickhouseBatchSize     int64
-	clickhouseFlushInterval time.Duration
-	clickhouseClient        *clickhouse.Client
-	buffer                  []clickhouse.Row
+	ready                       chan bool
+	timestampKey                string
+	lastFlush                   time.Time
+	clickhouseBatchSize         int64
+	clickhouseFlushInterval     time.Duration
+	clickhouseForceNumberFields []string
+	clickhouseClient            *clickhouse.Client
+	buffer                      []clickhouse.Row
 }
 
 // Setup is run at the beginning of a new session, before ConsumeClaim.
@@ -152,8 +153,19 @@ func (consumer *Consumer) ConsumeClaim(session sarama.ConsumerGroupSession, clai
 					row.FieldsNumber.Key = append(row.FieldsNumber.Key, k)
 					row.FieldsNumber.Value = append(row.FieldsNumber.Value, numberValue)
 				} else {
-					row.FieldsString.Key = append(row.FieldsString.Key, k)
-					row.FieldsString.Value = append(row.FieldsString.Value, stringValue)
+					if contains(k, consumer.clickhouseForceNumberFields) {
+						parsedNumber, err := strconv.ParseFloat(stringValue, 64)
+						if err == nil {
+							row.FieldsNumber.Key = append(row.FieldsNumber.Key, k)
+							row.FieldsNumber.Value = append(row.FieldsNumber.Value, parsedNumber)
+						} else {
+							row.FieldsString.Key = append(row.FieldsString.Key, k)
+							row.FieldsString.Value = append(row.FieldsString.Value, stringValue)
+						}
+					} else {
+						row.FieldsString.Key = append(row.FieldsString.Key, k)
+						row.FieldsString.Value = append(row.FieldsString.Value, stringValue)
+					}
 				}
 			}
 		}

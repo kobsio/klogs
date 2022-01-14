@@ -20,6 +20,7 @@ An example configuration file can be found in the [fluent-bit-cm.yaml](../../clu
 | `Wait_For_Async_Insert` | Wait for the async insert operation. | `false` |
 | `Batch_Size` | The size for how many log lines should be buffered, before they are written to ClickHouse. | `10000` |
 | `Flush_Interval` | The maximum amount of time to wait, before logs are written to ClickHouse. | `60s` |
+| `Force_Number_Fields` | A list of fields which should be parsed as number. | `60s` |
 | `Log_Format` | The log format for the Fluent Bit ClickHouse plugin. Must be `console` or `json`. | `console` |
 | `Log_Level` | The log level for the Fluent Bit ClickHouse plugin. Must be `debug`, `info`, `warn`, `error`, `fatal` or `panic`. | `info` |
 
