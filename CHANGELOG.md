@@ -8,6 +8,8 @@ NOTE: As semantic versioning states all 0.y.z releases can contain breaking chan
 
 ## Unreleased
 
+## [v0.7.0](https://github.com/kobsio/klogs/releases/tag/v0.7.0) (2022-01-14)
+
 - [#15](https://github.com/kobsio/klogs/pull/15): Update the used SQL schema to use `ReplicatedMergeTree` instead of `MergeTree`.
 - [#16](https://github.com/kobsio/klogs/pull/16): Update Fluent Bit to version 1.8.11.
 - [#17](https://github.com/kobsio/klogs/pull/17): Use `go.uber.org/zap` instead of `github.com/sirupsen/logrus` for logging.
