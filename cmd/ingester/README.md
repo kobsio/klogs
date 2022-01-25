@@ -53,11 +53,10 @@ k apply -f cluster/clickhouse-operator
 k apply -f cluster/clickhouse
 ```
 
-Once ClickHouse is running we have to connect to the two ClickHouse nodes to create our SQL schema. The schema can be found in the [`schema.sql`](../../schema.sql) file, just execute each SQL command one by one on both ClickHouse nodes:
+Once ClickHouse is running we have to connect to one ClickHouse instance to create our SQL schema. The schema can be found in the [`schema.sql`](../../schema.sql) file, just execute each SQL command one by one on the ClickHouse instance:
 
 ```sh
 k exec -n clickhouse -it chi-clickhouse-sharded-0-0-0 -c clickhouse -- clickhouse-client
-k exec -n clickhouse -it chi-clickhouse-sharded-1-0-0 -c clickhouse -- clickhouse-client
 ```
 
 Before we can deploy Fluent Bit and the ingester, we have to deploy Kafka using the following command:

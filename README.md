@@ -16,7 +16,7 @@ The configuration for the **Fluent Bit Plugin** and **ClickHouse Ingester** can 
 The SQL schema for ClickHouse must be created on each ClickHouse node and looks as follows:
 
 ```sql
-CREATE DATABASE IF NOT EXISTS logs ENGINE=Atomic;
+CREATE DATABASE IF NOT EXISTS logs ON CLUSTER `{cluster}` ENGINE=Atomic;
 
 CREATE TABLE IF NOT EXISTS logs.logs_local ON CLUSTER `{cluster}`
 (
