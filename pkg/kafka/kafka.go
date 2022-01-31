@@ -9,8 +9,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/kobsio/fluent-bit-clickhouse/pkg/clickhouse"
-	"github.com/kobsio/fluent-bit-clickhouse/pkg/log"
+	"github.com/kobsio/klogs/pkg/clickhouse"
+	"github.com/kobsio/klogs/pkg/log"
 
 	"github.com/Shopify/sarama"
 	"go.uber.org/zap"

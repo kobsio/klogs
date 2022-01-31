@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/kobsio/fluent-bit-clickhouse/pkg/log"
+	"github.com/kobsio/klogs/pkg/log"
 
 	"github.com/ClickHouse/clickhouse-go"
 	"go.uber.org/zap"
