@@ -9,10 +9,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/kobsio/fluent-bit-clickhouse/pkg/clickhouse"
-	"github.com/kobsio/fluent-bit-clickhouse/pkg/kafka"
-	"github.com/kobsio/fluent-bit-clickhouse/pkg/log"
-	"github.com/kobsio/fluent-bit-clickhouse/pkg/version"
+	"github.com/kobsio/klogs/pkg/clickhouse"
+	"github.com/kobsio/klogs/pkg/kafka"
+	"github.com/kobsio/klogs/pkg/log"
+	"github.com/kobsio/klogs/pkg/version"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	flag "github.com/spf13/pflag"
@@ -214,7 +214,7 @@ func main() {
 	// The short form of the version information is also printed in two lines, when the version option is set to
 	// "false".
 	if showVersion {
-		v, err := version.Print("kobs")
+		v, err := version.Print("klogs-ingester")
 		if err != nil {
 			log.Fatal(nil, "Failed to print version information", zap.Error(err))
 		}

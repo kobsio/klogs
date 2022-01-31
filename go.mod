@@ -1,4 +1,4 @@
-module github.com/kobsio/fluent-bit-clickhouse
+module github.com/kobsio/klogs
 
 go 1.17
 

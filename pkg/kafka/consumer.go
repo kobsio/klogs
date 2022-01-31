@@ -7,9 +7,9 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/kobsio/fluent-bit-clickhouse/pkg/clickhouse"
-	flatten "github.com/kobsio/fluent-bit-clickhouse/pkg/flatten/string"
-	"github.com/kobsio/fluent-bit-clickhouse/pkg/log"
+	"github.com/kobsio/klogs/pkg/clickhouse"
+	flatten "github.com/kobsio/klogs/pkg/flatten/string"
+	"github.com/kobsio/klogs/pkg/log"
 
 	"github.com/Shopify/sarama"
 	"github.com/prometheus/client_golang/prometheus"

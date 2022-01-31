@@ -12,10 +12,10 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/kobsio/fluent-bit-clickhouse/pkg/clickhouse"
-	flatten "github.com/kobsio/fluent-bit-clickhouse/pkg/flatten/interface"
-	"github.com/kobsio/fluent-bit-clickhouse/pkg/log"
-	"github.com/kobsio/fluent-bit-clickhouse/pkg/version"
+	"github.com/kobsio/klogs/pkg/clickhouse"
+	flatten "github.com/kobsio/klogs/pkg/flatten/interface"
+	"github.com/kobsio/klogs/pkg/log"
+	"github.com/kobsio/klogs/pkg/version"
 
 	"github.com/fluent/fluent-bit-go/output"
 	"go.uber.org/zap"
