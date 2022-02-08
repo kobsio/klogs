@@ -9,6 +9,7 @@ import (
 	"C"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 	"unsafe"
 
@@ -21,7 +22,6 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
-import "strings"
 
 const (
 	defaultDatabase      string        = "logs"
