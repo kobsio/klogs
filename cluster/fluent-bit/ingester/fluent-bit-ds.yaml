@@ -18,7 +18,7 @@ spec:
       serviceAccountName: fluent-bit
       serviceAccount: fluent-bit
       containers:
-        - image: fluent/fluent-bit:1.8.12
+        - image: fluent/fluent-bit:1.8.13
           imagePullPolicy: IfNotPresent
           name: fluent-bit
           ports:
@@ -42,6 +42,14 @@ spec:
               subPath: parsers.conf
             - mountPath: /tail-db
               name: tail-db
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+          readinessProbe:
+            httpGet:
+              path: /api/v1/health
+              port: http
           resources:
             limits:
               cpu: 100m

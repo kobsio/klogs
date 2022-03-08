@@ -10,6 +10,7 @@ NOTE: As semantic versioning states all 0.y.z releases can contain breaking chan
 
 - [#24](https://github.com/kobsio/klogs/pull/24): Rename repository in `go.mod` file to `github.com/kobsio/klogs`.
 - [#25](https://github.com/kobsio/klogs/pull/25): Update Fluent Bit to version 1.8.12.
+- [#26](https://github.com/kobsio/klogs/pull/26): Update Fluent Bit to version 1.8.13 and enable health checks
 
 ## [v0.7.0](https://github.com/kobsio/klogs/releases/tag/v0.7.0) (2022-01-14)
 
