@@ -23,6 +23,15 @@ build-ingester:
 		-X ${REPO}/pkg/version.BuildDate=${BUILDTIME}" \
 		-o ingester ./cmd/ingester;
 
+.PHONY: build-filebeat
+build-filebeat:
+	@go build -ldflags "-X ${REPO}/pkg/version.Version=${VERSION} \
+		-X ${REPO}/pkg/version.Revision=${REVISION} \
+		-X ${REPO}/pkg/version.Branch=${BRANCH} \
+		-X ${REPO}/pkg/version.BuildUser=${BUILDUSER} \
+		-X ${REPO}/pkg/version.BuildDate=${BUILDTIME}" \
+		-o filebeat ./cmd/filebeat;
+
 .PHONY: release-major
 release-major:
 	$(eval MAJORVERSION=$(shell git describe --tags --abbrev=0 | sed s/v// | awk -F. '{print "v"$$1+1".0.0"}'))

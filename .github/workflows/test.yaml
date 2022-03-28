@@ -43,3 +43,7 @@ jobs:
       - name: Build Ingester
         run: |
           make build-ingester
+
+      - name: Build Filebeat
+        run: |
+          make build-filebeat

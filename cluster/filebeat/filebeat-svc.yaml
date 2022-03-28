@@ -1,0 +1,21 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: filebeat
+  namespace: filebeat
+  labels:
+    app: filebeat
+spec:
+  ports:
+    - name: http
+      port: 5066
+      protocol: TCP
+      targetPort: http
+    - name: http-metrics
+      port: 9479
+      protocol: TCP
+      targetPort: http-metrics
+  selector:
+    app: filebeat
+  type: ClusterIP
