@@ -88,6 +88,11 @@ func (c *Client) Write(buffer []Row) error {
 	return nil
 }
 
+// Close can be used to close the underlying sql client for ClickHouse.
+func (c *Client) Close() error {
+	return c.client.Close()
+}
+
 // NewClient returns a new client for ClickHouse. The client can then be used to write data to ClickHouse via the
 // "Write" method.
 func NewClient(address, username, password, database, writeTimeout, readTimeout string, asyncInsert, waitForAsyncInsert bool) (*Client, error) {

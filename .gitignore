@@ -1,3 +1,4 @@
 /out_clickhouse.h
 /out_clickhouse.so
 /ingester
+/filebeat
