@@ -6,10 +6,5 @@ RUN go mod download
 COPY . .
 RUN export CGO_ENABLED=0 && make build-filebeat
 
-FROM alpine:3.14.2
-RUN apk update && apk add --no-cache ca-certificates
-RUN mkdir /filebeat
-COPY --from=build /filebeat/filebeat /filebeat
-WORKDIR /filebeat
-USER nobody
-ENTRYPOINT  [ "/filebeat/filebeat" ]
+FROM docker.elastic.co/beats/filebeat:7.17.1
+COPY --from=build /filebeat/filebeat /usr/share/filebeat
