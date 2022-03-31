@@ -8,6 +8,8 @@ NOTE: As semantic versioning states all 0.y.z releases can contain breaking chan
 
 ## Unreleased
 
+## [v0.9.0](https://github.com/kobsio/klogs/releases/tag/v0.9.0) (2022-03-31)
+
 - [#28](https://github.com/kobsio/klogs/pull/28): Add Filebeat as alternative to Fluent Bit.
 - [#29](https://github.com/kobsio/klogs/pull/29): Update Fluent Bit to version 1.9.1.
 - [#30](https://github.com/kobsio/klogs/pull/30): Use official Filebeat image as base image.
