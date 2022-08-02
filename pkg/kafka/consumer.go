@@ -79,8 +79,11 @@ func (consumer *Consumer) ConsumeClaim(session sarama.ConsumerGroupSession, clai
 			var stringValue string
 			var numberValue float64
 			var isNumber bool
+			var isNil bool
 
 			switch t := v.(type) {
+			case nil:
+				isNil = true
 			case string:
 				stringValue = t
 			case []byte:
@@ -122,49 +125,51 @@ func (consumer *Consumer) ConsumeClaim(session sarama.ConsumerGroupSession, clai
 				stringValue = fmt.Sprintf("%v", v)
 			}
 
-			switch k {
-			case consumer.timestampKey:
-				parsedTime, err := strconv.ParseFloat(stringValue, 64)
-				if err != nil {
-					log.Warn(nil, "Could not parse timestamp, defaulting to now", zap.Error(err))
-					row.Timestamp = time.Now()
-				} else {
-					sec, dec := math.Modf(parsedTime)
-					row.Timestamp = time.Unix(int64(sec), int64(dec*(1e9)))
-				}
-			case "cluster":
-				row.Cluster = stringValue
-			case "kubernetes.namespace_name":
-				row.Namespace = stringValue
-			case "kubernetes.labels.k8s-app":
-				row.App = stringValue
-			case "kubernetes.labels.app":
-				row.App = stringValue
-			case "kubernetes.pod_name":
-				row.Pod = stringValue
-			case "kubernetes.container_name":
-				row.Container = stringValue
-			case "kubernetes.host":
-				row.Host = stringValue
-			case "log":
-				row.Log = stringValue
-			default:
-				if isNumber {
-					row.FieldsNumber.Key = append(row.FieldsNumber.Key, k)
-					row.FieldsNumber.Value = append(row.FieldsNumber.Value, numberValue)
-				} else {
-					if contains(k, consumer.clickhouseForceNumberFields) {
-						parsedNumber, err := strconv.ParseFloat(stringValue, 64)
-						if err == nil {
-							row.FieldsNumber.Key = append(row.FieldsNumber.Key, k)
-							row.FieldsNumber.Value = append(row.FieldsNumber.Value, parsedNumber)
+			if !isNil {
+				switch k {
+				case consumer.timestampKey:
+					parsedTime, err := strconv.ParseFloat(stringValue, 64)
+					if err != nil {
+						log.Warn(nil, "Could not parse timestamp, defaulting to now", zap.Error(err))
+						row.Timestamp = time.Now()
+					} else {
+						sec, dec := math.Modf(parsedTime)
+						row.Timestamp = time.Unix(int64(sec), int64(dec*(1e9)))
+					}
+				case "cluster":
+					row.Cluster = stringValue
+				case "kubernetes.namespace_name":
+					row.Namespace = stringValue
+				case "kubernetes.labels.k8s-app":
+					row.App = stringValue
+				case "kubernetes.labels.app":
+					row.App = stringValue
+				case "kubernetes.pod_name":
+					row.Pod = stringValue
+				case "kubernetes.container_name":
+					row.Container = stringValue
+				case "kubernetes.host":
+					row.Host = stringValue
+				case "log":
+					row.Log = stringValue
+				default:
+					if isNumber {
+						row.FieldsNumber.Key = append(row.FieldsNumber.Key, k)
+						row.FieldsNumber.Value = append(row.FieldsNumber.Value, numberValue)
+					} else {
+						if contains(k, consumer.clickhouseForceNumberFields) {
+							parsedNumber, err := strconv.ParseFloat(stringValue, 64)
+							if err == nil {
+								row.FieldsNumber.Key = append(row.FieldsNumber.Key, k)
+								row.FieldsNumber.Value = append(row.FieldsNumber.Value, parsedNumber)
+							} else {
+								row.FieldsString.Key = append(row.FieldsString.Key, k)
+								row.FieldsString.Value = append(row.FieldsString.Value, stringValue)
+							}
 						} else {
 							row.FieldsString.Key = append(row.FieldsString.Key, k)
 							row.FieldsString.Value = append(row.FieldsString.Value, stringValue)
 						}
-					} else {
-						row.FieldsString.Key = append(row.FieldsString.Key, k)
-						row.FieldsString.Value = append(row.FieldsString.Value, stringValue)
 					}
 				}
 			}
