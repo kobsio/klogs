@@ -8,6 +8,8 @@ NOTE: As semantic versioning states all 0.y.z releases can contain breaking chan
 
 ## Unreleased
 
+## [v0.9.1](https://github.com/kobsio/klogs/releases/tag/v0.9.1) (2022-08-02)
+
 - [#31](https://github.com/kobsio/klogs/pull/31): Omit `nil` values.
 
 ## [v0.9.0](https://github.com/kobsio/klogs/releases/tag/v0.9.0) (2022-03-31)
