@@ -54,8 +54,11 @@ func (c *Client) Publish(ctx context.Context, batch publisher.Batch) error {
 			var stringValue string
 			var numberValue float64
 			var isNumber bool
+			var isNil bool
 
 			switch t := v.(type) {
+			case nil:
+				isNil = true
 			case string:
 				stringValue = t
 			case []byte:
@@ -97,38 +100,40 @@ func (c *Client) Publish(ctx context.Context, batch publisher.Batch) error {
 				stringValue = fmt.Sprintf("%v", v)
 			}
 
-			switch k {
-			case "kubernetes.namespace":
-				row.Namespace = stringValue
-			case "kubernetes.labels.k8s-app":
-				row.App = stringValue
-			case "kubernetes.labels.app":
-				row.App = stringValue
-			case "kubernetes.pod.name":
-				row.Pod = stringValue
-			case "kubernetes.container.name":
-				row.Container = stringValue
-			case "kubernetes.node.hostname":
-				row.Host = stringValue
-			case "message":
-				row.Log = stringValue
-			default:
-				if isNumber {
-					row.FieldsNumber.Key = append(row.FieldsNumber.Key, k)
-					row.FieldsNumber.Value = append(row.FieldsNumber.Value, numberValue)
-				} else {
-					if contains(k, c.clickhouseForceNumberFields) {
-						parsedNumber, err := strconv.ParseFloat(stringValue, 64)
-						if err == nil {
-							row.FieldsNumber.Key = append(row.FieldsNumber.Key, k)
-							row.FieldsNumber.Value = append(row.FieldsNumber.Value, parsedNumber)
+			if !isNil {
+				switch k {
+				case "kubernetes.namespace":
+					row.Namespace = stringValue
+				case "kubernetes.labels.k8s-app":
+					row.App = stringValue
+				case "kubernetes.labels.app":
+					row.App = stringValue
+				case "kubernetes.pod.name":
+					row.Pod = stringValue
+				case "kubernetes.container.name":
+					row.Container = stringValue
+				case "kubernetes.node.hostname":
+					row.Host = stringValue
+				case "message":
+					row.Log = stringValue
+				default:
+					if isNumber {
+						row.FieldsNumber.Key = append(row.FieldsNumber.Key, k)
+						row.FieldsNumber.Value = append(row.FieldsNumber.Value, numberValue)
+					} else {
+						if contains(k, c.clickhouseForceNumberFields) {
+							parsedNumber, err := strconv.ParseFloat(stringValue, 64)
+							if err == nil {
+								row.FieldsNumber.Key = append(row.FieldsNumber.Key, k)
+								row.FieldsNumber.Value = append(row.FieldsNumber.Value, parsedNumber)
+							} else {
+								row.FieldsString.Key = append(row.FieldsString.Key, k)
+								row.FieldsString.Value = append(row.FieldsString.Value, stringValue)
+							}
 						} else {
 							row.FieldsString.Key = append(row.FieldsString.Key, k)
 							row.FieldsString.Value = append(row.FieldsString.Value, stringValue)
 						}
-					} else {
-						row.FieldsString.Key = append(row.FieldsString.Key, k)
-						row.FieldsString.Value = append(row.FieldsString.Value, stringValue)
 					}
 				}
 			}
