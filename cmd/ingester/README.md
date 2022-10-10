@@ -14,8 +14,10 @@ An example Deployment for the ClickHouse ingester can be found in the [ingester.
 | `--clickhouse.database` | `CLICKHOUSE_DATABASE` | ClickHouse database name. | `logs` |
 | `--clickhouse.username` | `CLICKHOUSE_USERNAME` | ClickHouse username for the connection. | |
 | `--clickhouse.password` | `CLICKHOUSE_PASSWORD` | ClickHouse password for the connection. | |
-| `--clickhouse.write-timeout` | `CLICKHOUSE_WRITE_TIMEOUT` | ClickHouse write timeout for the connection. | `10` |
-| `--clickhouse.read-timeout` | `CLICKHOUSE_READ_TIMEOUT` | ClickHouse read timeout for the connection. | `10` |
+| `--clickhouse.dial-timeout` | `CLICKHOUSE_DIAL_TIMEOUT` | ClickHouse dial timeout. | `10s` |
+| `--clickhouse.conn-max-lifetime` | `CLICKHOUSE_CONN_MAX_LIFETIME` | ClickHouse maximum connection lifetime. | `1h` |
+| `--clickhouse.max-idle-conns` | `CLICKHOUSE_MAX_IDLE_CONNS` | ClickHouse maximum number of idle connections. | `5` |
+| `--clickhouse.max-open-conns` | `CLICKHOUSE_MAX_OPEN_CONNS` | ClickHouse maximum number of open connections. | `10` |
 | `--clickhouse.async-insert` | `CLICKHOUSE_ASYNC_INSERT` | Enable async inserts. | `false` |
 | `--clickhouse.wait-for-async-insert` | `CLICKHOUSE_WAIT_FOR_ASYNC_INSERT` | Wait for async inserts. | `false` |
 | `--clickhouse.batch-size` | `CLICKHOUSE_BATCH_SIZE` | The size for how many log lines should be buffered, before they are written to ClickHouse. | `100000` |

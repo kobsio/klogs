@@ -14,8 +14,10 @@ An example configuration file can be found in the [fluent-bit-cm.yaml](../../clu
 | `Database` | The name of the database for the logs. | `logs` |
 | `Username` | The username, to authenticate to ClickHouse. | |
 | `Password` | The password, to authenticate to ClickHouse. | |
-| `Write_Timeout` | The write timeout for ClickHouse. | `10` |
-| `Read_Timeout` | The read timeout for ClickHouse. | `10` |
+| `Dial_Timeout` | ClickHouse dial timeout. | `10s` |
+| `Conn_Max_Lifetime` | ClickHouse maximum connection lifetime. | `1h` |
+| `Max_Idle_Conns` | ClickHouse maximum number of idle connections. | `5` |
+| `Max_Open_Conns` | ClickHouse maximum number of open connections. | `10` |
 | `Async_Insert` | Use async inserts to write logs into ClickHouse. | `false` |
 | `Wait_For_Async_Insert` | Wait for the async insert operation. | `false` |
 | `Batch_Size` | The size for how many log lines should be buffered, before they are written to ClickHouse. | `10000` |

@@ -24,11 +24,13 @@ import (
 )
 
 const (
-	defaultDatabase      string        = "logs"
-	defaultWriteTimeout  string        = "10"
-	defaultReadTimeout   string        = "10"
-	defaultBatchSize     int64         = 10000
-	defaultFlushInterval time.Duration = 60 * time.Second
+	defaultDatabase        string        = "logs"
+	defaultDialTimeout     string        = "10s"
+	defaultConnMaxLifetime string        = "1h"
+	defaultMaxIdleConns    int           = 5
+	defaultMaxOpenConns    int           = 10
+	defaultBatchSize       int64         = 10000
+	defaultFlushInterval   time.Duration = 60 * time.Second
 )
 
 var (
@@ -80,7 +82,7 @@ func FLBPluginInit(plugin unsafe.Pointer) int {
 		},
 	}
 
-	logger, err := zapConfig.Build()
+	logger, err := zapConfig.Build(zap.AddCaller(), zap.AddCallerSkip(1))
 	if err != nil {
 		panic(err)
 	}
@@ -101,14 +103,28 @@ func FLBPluginInit(plugin unsafe.Pointer) int {
 
 	password := output.FLBPluginConfigKey(plugin, "password")
 
-	writeTimeout := output.FLBPluginConfigKey(plugin, "write_timeout")
-	if writeTimeout == "" {
-		writeTimeout = defaultReadTimeout
+	dialTimeout := output.FLBPluginConfigKey(plugin, "dial_timeout")
+	if dialTimeout == "" {
+		dialTimeout = defaultDialTimeout
 	}
 
-	readTimeout := output.FLBPluginConfigKey(plugin, "read_timeout")
-	if readTimeout == "" {
-		readTimeout = defaultReadTimeout
+	connMaxLifetime := output.FLBPluginConfigKey(plugin, "conn_max_lifetime")
+	if connMaxLifetime == "" {
+		connMaxLifetime = defaultConnMaxLifetime
+	}
+
+	maxIdleConnsStr := output.FLBPluginConfigKey(plugin, "max_idle_conns")
+	maxIdleConns, err := strconv.Atoi(maxIdleConnsStr)
+	if err != nil || maxIdleConns < 0 {
+		log.Warn(nil, "Could not parse maxIdleConns setting, use default setting", zap.Error(err), zap.Int("default", defaultMaxIdleConns))
+		maxIdleConns = defaultMaxIdleConns
+	}
+
+	maxOpenConnsStr := output.FLBPluginConfigKey(plugin, "max_open_conns")
+	maxOpenConns, err := strconv.Atoi(maxOpenConnsStr)
+	if err != nil || maxOpenConns < 0 {
+		log.Warn(nil, "Could not parse maxOpenConns setting, use default setting", zap.Error(err), zap.Int("default", defaultMaxOpenConns))
+		maxOpenConns = defaultMaxOpenConns
 	}
 
 	asyncInsertStr := output.FLBPluginConfigKey(plugin, "async_insert")
@@ -140,9 +156,9 @@ func FLBPluginInit(plugin unsafe.Pointer) int {
 	forceNumberFieldsStr := output.FLBPluginConfigKey(plugin, "force_number_fields")
 	forceNumberFields = strings.Split(forceNumberFieldsStr, ",")
 
-	log.Info(nil, "Clickhouse configuration", zap.String("clickhouseAddress", address), zap.String("clickhouseUsername", username), zap.String("clickhousePassword", "*****"), zap.String("clickhouseDatabase", database), zap.String("clickhouseWriteTimeout", writeTimeout), zap.String("clickhouseReadTimeout", readTimeout), zap.Int64("clickhouseBatchSize", batchSize), zap.Duration("clickhouseFlushInterval", flushInterval), zap.Strings("forceNumberFields", forceNumberFields))
+	log.Info(nil, "Clickhouse configuration", zap.String("address", address), zap.String("username", username), zap.String("password", "*****"), zap.String("database", database), zap.String("dialTimeout", dialTimeout), zap.String("connMaxLifetime", connMaxLifetime), zap.Int("maxIdleConns", maxIdleConns), zap.Int("maxOpenConns", maxOpenConns), zap.Int64("batchSize", batchSize), zap.Duration("flushInterval", flushInterval))
 
-	clickhouseClient, err := clickhouse.NewClient(address, username, password, database, writeTimeout, readTimeout, asyncInsert, waitForAsyncInsert)
+	clickhouseClient, err := clickhouse.NewClient(address, username, password, database, dialTimeout, connMaxLifetime, maxIdleConns, maxOpenConns, asyncInsert, waitForAsyncInsert)
 	if err != nil {
 		log.Fatal(nil, "Could not create ClickHouse client", zap.Error(err))
 		return output.FLB_ERROR
@@ -187,7 +203,9 @@ func FLBPluginFlushCtx(ctx, data unsafe.Pointer, length C.int, tag *C.char) int 
 		}
 
 		row := clickhouse.Row{
-			Timestamp: timestamp,
+			Timestamp:    timestamp,
+			FieldsString: make(map[string]string),
+			FieldsNumber: make(map[string]float64),
 		}
 
 		for k, v := range data {
@@ -260,21 +278,17 @@ func FLBPluginFlushCtx(ctx, data unsafe.Pointer, length C.int, tag *C.char) int 
 					row.Log = stringValue
 				default:
 					if isNumber {
-						row.FieldsNumber.Key = append(row.FieldsNumber.Key, k)
-						row.FieldsNumber.Value = append(row.FieldsNumber.Value, numberValue)
+						row.FieldsNumber[k] = numberValue
 					} else {
 						if contains(k, forceNumberFields) {
 							parsedNumber, err := strconv.ParseFloat(stringValue, 64)
 							if err == nil {
-								row.FieldsNumber.Key = append(row.FieldsNumber.Key, k)
-								row.FieldsNumber.Value = append(row.FieldsNumber.Value, parsedNumber)
+								row.FieldsNumber[k] = parsedNumber
 							} else {
-								row.FieldsString.Key = append(row.FieldsString.Key, k)
-								row.FieldsString.Value = append(row.FieldsString.Value, stringValue)
+								row.FieldsString[k] = stringValue
 							}
 						} else {
-							row.FieldsString.Key = append(row.FieldsString.Key, k)
-							row.FieldsString.Value = append(row.FieldsString.Value, stringValue)
+							row.FieldsString[k] = stringValue
 						}
 					}
 				}

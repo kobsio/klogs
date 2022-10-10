@@ -27,10 +27,8 @@ CREATE TABLE IF NOT EXISTS logs.logs_local ON CLUSTER `{cluster}`
     `pod_name` LowCardinality(String),
     `container_name` LowCardinality(String),
     `host` LowCardinality(String),
-    `fields_string.key` Array(LowCardinality(String)),
-    `fields_string.value` Array(String) CODEC(ZSTD(1)),
-    `fields_number.key` Array(LowCardinality(String)),
-    `fields_number.value` Array(Float64),
+    `fields_string` Map(LowCardinality(String), String),
+    `fields_number` Map(LowCardinality(String), Float64),
     `log` String CODEC(ZSTD(1))
 )
 ENGINE = ReplicatedMergeTree

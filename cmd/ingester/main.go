@@ -25,8 +25,10 @@ var (
 	clickhouseUsername           string
 	clickhousePassword           string
 	clickhouseDatabase           string
-	clickhouseWriteTimeout       string
-	clickhouseReadTimeout        string
+	clickhouseDialTimeout        string
+	clickhouseConnMaxLifetime    string
+	clickhouseMaxIdleConns       int
+	clickhouseMaxOpenConns       int
 	clickhouseAsyncInsert        bool
 	clickhouseWaitForAsyncInsert bool
 	clickhouseBatchSize          int64
@@ -65,14 +67,32 @@ func init() {
 		defaultClickHouseDatabase = os.Getenv("CLICKHOUSE_DATABASE")
 	}
 
-	defaultClickHouseWriteTimeout := "10"
-	if os.Getenv("CLICKHOUSE_WRITE_TIMEOUT") != "" {
-		defaultClickHouseWriteTimeout = os.Getenv("CLICKHOUSE_WRITE_TIMEOUT")
+	defaultClickHouseDialTimeout := "10s"
+	if os.Getenv("CLICKHOUSE_DIAL_TIMEOUT") != "" {
+		defaultClickHouseDialTimeout = os.Getenv("CLICKHOUSE_DIAL_TIMEOUT")
 	}
 
-	defaultClickHouseReadTimeout := "10"
-	if os.Getenv("CLICKHOUSE_READ_TIMEOUT") != "" {
-		defaultClickHouseReadTimeout = os.Getenv("CLICKHOUSE_READ_TIMEOUT")
+	defaultClickHouseConnMaxLifetime := "1h"
+	if os.Getenv("CLICKHOUSE_CONN_MAX_LIFETIME") != "" {
+		defaultClickHouseConnMaxLifetime = os.Getenv("CLICKHOUSE_CONN_MAX_LIFETIME")
+	}
+
+	defaultClickHouseMaxIdleConns := 5
+	if os.Getenv("CLICKHOUSE_MAX_IDLE_CONNS") != "" {
+		defaultClickHouseMaxIdleConnsString := os.Getenv("CLICKHOUSE_MAX_IDLE_CONNS")
+		defaultClickHouseMaxIdleConnsParsed, err := strconv.Atoi(defaultClickHouseMaxIdleConnsString)
+		if err == nil && defaultClickHouseMaxIdleConnsParsed > 0 {
+			defaultClickHouseMaxIdleConns = defaultClickHouseMaxIdleConnsParsed
+		}
+	}
+
+	defaultClickHouseMaxOpenConns := 10
+	if os.Getenv("CLICKHOUSE_MAX_OPEN_CONNS") != "" {
+		defaultClickHouseMaxOpenConnsString := os.Getenv("CLICKHOUSE_MAX_OPEN_CONNS")
+		defaultClickHouseMaxOpenConnsParsed, err := strconv.Atoi(defaultClickHouseMaxOpenConnsString)
+		if err == nil && defaultClickHouseMaxOpenConnsParsed > 0 {
+			defaultClickHouseMaxOpenConns = defaultClickHouseMaxOpenConnsParsed
+		}
 	}
 
 	defaultClickHouseAsyncInsert := false
@@ -156,8 +176,10 @@ func init() {
 	flag.StringVar(&clickhouseUsername, "clickhouse.username", defaultClickHouseUsername, "ClickHouse username for the connection.")
 	flag.StringVar(&clickhousePassword, "clickhouse.password", defaultClickHousePassword, "ClickHouse password for the connection.")
 	flag.StringVar(&clickhouseDatabase, "clickhouse.database", defaultClickHouseDatabase, "ClickHouse database name.")
-	flag.StringVar(&clickhouseWriteTimeout, "clickhouse.write-timeout", defaultClickHouseWriteTimeout, "ClickHouse write timeout for the connection.")
-	flag.StringVar(&clickhouseReadTimeout, "clickhouse.read-timeout", defaultClickHouseReadTimeout, "ClickHouse read timeout for the connection.")
+	flag.StringVar(&clickhouseDialTimeout, "clickhouse.dial-timeout", defaultClickHouseDialTimeout, "ClickHouse dial timeout.")
+	flag.StringVar(&clickhouseConnMaxLifetime, "clickhouse.conn-max-lifetime", defaultClickHouseConnMaxLifetime, "ClickHouse maximum connection lifetime.")
+	flag.IntVar(&clickhouseMaxIdleConns, "clickhouse.max-idle-conns", defaultClickHouseMaxIdleConns, "ClickHouse maximum number of idle connections.")
+	flag.IntVar(&clickhouseMaxOpenConns, "clickhouse.max-open-conns", defaultClickHouseMaxOpenConns, "ClickHouse maximum number of open connections.")
 	flag.BoolVar(&clickhouseAsyncInsert, "clickhouse.async-insert", defaultClickHouseAsyncInsert, "Enable async inserts.")
 	flag.BoolVar(&clickhouseWaitForAsyncInsert, "clickhouse.wait-for-async-insert", defaultClickHouseWaitForAsyncInsert, "Wait for async inserts.")
 	flag.Int64Var(&clickhouseBatchSize, "clickhouse.batch-size", defaultClickHouseBatchSize, "The size for how many log lines should be buffered, before they are written to ClickHouse.")
@@ -201,7 +223,7 @@ func main() {
 		},
 	}
 
-	logger, err := zapConfig.Build()
+	logger, err := zapConfig.Build(zap.AddCaller(), zap.AddCallerSkip(1))
 	if err != nil {
 		panic(err)
 	}
@@ -225,7 +247,7 @@ func main() {
 
 	log.Info(nil, "Version information", version.Info()...)
 	log.Info(nil, "Build context", version.BuildContext()...)
-	log.Info(nil, "Clickhouse configuration", zap.String("clickhouseAddress", clickhouseAddress), zap.String("clickhouseUsername", clickhouseUsername), zap.String("clickhousePassword", "*****"), zap.String("clickhouseDatabase", clickhouseDatabase), zap.String("clickhouseWriteTimeout", clickhouseWriteTimeout), zap.String("clickhouseReadTimeout", clickhouseReadTimeout), zap.Int64("clickhouseBatchSize", clickhouseBatchSize), zap.Duration("clickhouseFlushInterval", clickhouseFlushInterval))
+	log.Info(nil, "Clickhouse configuration", zap.String("clickhouseAddress", clickhouseAddress), zap.String("clickhouseUsername", clickhouseUsername), zap.String("clickhousePassword", "*****"), zap.String("clickhouseDatabase", clickhouseDatabase), zap.String("clickhouseDialTimeout", clickhouseDialTimeout), zap.String("clickhouseConnMaxLifetime", clickhouseConnMaxLifetime), zap.Int("clickhouseMaxIdleConns", clickhouseMaxIdleConns), zap.Int("clickhouseMaxOpenConns", clickhouseMaxOpenConns), zap.Int64("clickhouseBatchSize", clickhouseBatchSize), zap.Duration("clickhouseFlushInterval", clickhouseFlushInterval))
 	log.Info(nil, "Kafka configuration", zap.String("kafkaBrokers", kafkaBrokers), zap.String("kafkaGroup", kafkaGroup), zap.String("kafkaVersion", kafkaVersion), zap.String("kafkaTopics", kafkaTopics))
 
 	// Create a http server, which can be used for the liveness and readiness probe in Kubernetes. The server also
@@ -246,7 +268,7 @@ func main() {
 	// Create a new client for the configured ClickHouse instance. Then pass the ClickHouse client to the Run function
 	// of the Kafka package, which listens for message in the configured Kafka instance. These messages are then written
 	// to ClickHouse via the created ClickHouse client.
-	client, err := clickhouse.NewClient(clickhouseAddress, clickhouseUsername, clickhousePassword, clickhouseDatabase, clickhouseWriteTimeout, clickhouseReadTimeout, clickhouseAsyncInsert, clickhouseWaitForAsyncInsert)
+	client, err := clickhouse.NewClient(clickhouseAddress, clickhouseUsername, clickhousePassword, clickhouseDatabase, clickhouseDialTimeout, clickhouseConnMaxLifetime, clickhouseMaxIdleConns, clickhouseMaxOpenConns, clickhouseAsyncInsert, clickhouseWaitForAsyncInsert)
 	if err != nil {
 		log.Fatal(nil, "Could not create ClickHouse client", zap.Error(err))
 	}

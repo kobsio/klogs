@@ -57,8 +57,6 @@ data:
         Database              logs
         Username              admin
         Password              admin
-        Write_Timeout         20
-        Read_Timeout          10
         Async_Insert          true
         Wait_For_Async_Insert true
         Batch_Size            1000
