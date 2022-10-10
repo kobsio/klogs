@@ -39,7 +39,6 @@ var (
 	flushInterval     time.Duration
 	forceNumberFields []string
 	lastFlush         = time.Now()
-	buffer            = make([]clickhouse.Row, 0)
 	client            *clickhouse.Client
 )
 
@@ -295,19 +294,22 @@ func FLBPluginFlushCtx(ctx, data unsafe.Pointer, length C.int, tag *C.char) int 
 			}
 		}
 
-		buffer = append(buffer, row)
+		client.BufferAdd(row)
 	}
 
 	startFlushTime := time.Now()
-	if len(buffer) < int(batchSize) && lastFlush.Add(flushInterval).After(startFlushTime) {
+	if client.BufferLen() < int(batchSize) && lastFlush.Add(flushInterval).After(startFlushTime) {
 		return output.FLB_OK
 	}
 
-	log.Info(nil, "Start flushing", zap.Int("batchSize", len(buffer)), zap.Duration("flushInterval", startFlushTime.Sub(lastFlush)))
-	client.Write(buffer)
+	log.Info(nil, "Start flushing", zap.Int("batchSize", client.BufferLen()), zap.Duration("flushInterval", startFlushTime.Sub(lastFlush)))
+	err := client.BufferWrite()
+	if err != nil {
+		log.Error(nil, "Error while writing buffer", zap.Error(err))
+		return output.FLB_ERROR
+	}
 
 	lastFlush = time.Now()
-	buffer = make([]clickhouse.Row, 0)
 	log.Info(nil, "End flushing", zap.Duration("flushTime", lastFlush.Sub(startFlushTime)))
 
 	return output.FLB_OK

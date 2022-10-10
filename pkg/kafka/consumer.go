@@ -39,7 +39,6 @@ type Consumer struct {
 	clickhouseFlushInterval     time.Duration
 	clickhouseForceNumberFields []string
 	clickhouseClient            *clickhouse.Client
-	buffer                      []clickhouse.Row
 }
 
 // Setup is run at the beginning of a new session, before ConsumeClaim.
@@ -174,18 +173,17 @@ func (consumer *Consumer) ConsumeClaim(session sarama.ConsumerGroupSession, clai
 			}
 		}
 
-		consumer.buffer = append(consumer.buffer, row)
+		consumer.clickhouseClient.BufferAdd(row)
 		session.MarkMessage(message, "")
 
-		if len(consumer.buffer) >= int(consumer.clickhouseBatchSize) || consumer.lastFlush.Add(consumer.clickhouseFlushInterval).Before(time.Now()) {
+		if consumer.clickhouseClient.BufferLen() >= int(consumer.clickhouseBatchSize) || consumer.lastFlush.Add(consumer.clickhouseFlushInterval).Before(time.Now()) {
 			flushIntervalMetric.Set(time.Now().Sub(consumer.lastFlush).Seconds())
-			batchSizeMetric.Set(float64(len(consumer.buffer)))
+			batchSizeMetric.Set(float64(consumer.clickhouseClient.BufferLen()))
 
-			err := consumer.clickhouseClient.Write(consumer.buffer)
+			err := consumer.clickhouseClient.BufferWrite()
 			if err != nil {
 				log.Error(nil, "Could nor write buffer", zap.Error(err))
 			} else {
-				consumer.buffer = make([]clickhouse.Row, 0)
 				consumer.lastFlush = time.Now()
 			}
 		}
