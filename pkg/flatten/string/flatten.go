@@ -57,7 +57,7 @@ func enkey(top bool, prefix, subkey string) string {
 	if top {
 		key += subkey
 	} else {
-		key += "." + subkey
+		key += "_" + subkey
 	}
 
 	return key
