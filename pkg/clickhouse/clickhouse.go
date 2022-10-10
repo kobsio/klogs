@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/kobsio/klogs/pkg/log"
@@ -32,10 +33,32 @@ type Client struct {
 	database           string
 	asyncInsert        bool
 	waitForAsyncInsert bool
+	bufferMutex        *sync.RWMutex
+	buffer             []Row
 }
 
-// Write writes a list of rows to the configured ClickHouse instance.
-func (c *Client) Write(buffer []Row) error {
+// BufferAdd adds a new row to the Clickhouse buffer. This doesn't write the added row. To write the rows in the buffer
+// the `write` method must be called.
+func (c *Client) BufferAdd(row Row) {
+	c.bufferMutex.Lock()
+	defer c.bufferMutex.Unlock()
+
+	c.buffer = append(c.buffer, row)
+}
+
+// BufferLen returns the number of items in the buffer.
+func (c *Client) BufferLen() int {
+	c.bufferMutex.Lock()
+	defer c.bufferMutex.Unlock()
+
+	return len(c.buffer)
+}
+
+// BufferWrite writes a list of rows from the buffer to the configured ClickHouse instance.
+func (c *Client) BufferWrite() error {
+	c.bufferMutex.Lock()
+	defer c.bufferMutex.Unlock()
+
 	var settings string
 
 	if c.asyncInsert {
@@ -54,14 +77,14 @@ func (c *Client) Write(buffer []Row) error {
 		return err
 	}
 
-	smt, err := tx.Prepare(sql)
+	stmt, err := tx.Prepare(sql)
 	if err != nil {
 		log.Error(nil, "Prepare statement failure", zap.Error(err))
 		return err
 	}
 
-	for _, l := range buffer {
-		_, err = smt.Exec(l.Timestamp, l.Cluster, l.Namespace, l.App, l.Pod, l.Container, l.Host, l.FieldsString, l.FieldsNumber, l.Log)
+	for _, l := range c.buffer {
+		_, err = stmt.Exec(l.Timestamp, l.Cluster, l.Namespace, l.App, l.Pod, l.Container, l.Host, l.FieldsString, l.FieldsNumber, l.Log)
 
 		if err != nil {
 			log.Error(nil, "Statement exec failure", zap.Error(err))
@@ -74,6 +97,7 @@ func (c *Client) Write(buffer []Row) error {
 		return err
 	}
 
+	c.buffer = make([]Row, 0)
 	return nil
 }
 
@@ -123,5 +147,7 @@ func NewClient(address, username, password, database, dialTimeout, connMaxLifeti
 		database:           database,
 		asyncInsert:        asyncInsert,
 		waitForAsyncInsert: waitForAsyncInsert,
+		bufferMutex:        &sync.RWMutex{},
+		buffer:             make([]Row, 0),
 	}, nil
 }
