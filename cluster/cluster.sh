@@ -24,7 +24,7 @@ containerdConfigPatches:
     endpoint = ["http://${reg_name}:${reg_port}"]
 nodes:
 - role: control-plane
-  image: kindest/node:v1.20.7
+  image: kindest/node:v1.25.2
 EOF
 
 # connect the registry to the cluster network

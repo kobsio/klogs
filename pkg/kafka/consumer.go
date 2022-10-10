@@ -73,7 +73,10 @@ func (consumer *Consumer) ConsumeClaim(session sarama.ConsumerGroupSession, clai
 			break
 		}
 
-		row := clickhouse.Row{}
+		row := clickhouse.Row{
+			FieldsString: make(map[string]string),
+			FieldsNumber: make(map[string]float64),
+		}
 
 		for k, v := range data {
 			var stringValue string
@@ -154,21 +157,17 @@ func (consumer *Consumer) ConsumeClaim(session sarama.ConsumerGroupSession, clai
 					row.Log = stringValue
 				default:
 					if isNumber {
-						row.FieldsNumber.Key = append(row.FieldsNumber.Key, k)
-						row.FieldsNumber.Value = append(row.FieldsNumber.Value, numberValue)
+						row.FieldsNumber[k] = numberValue
 					} else {
 						if contains(k, consumer.clickhouseForceNumberFields) {
 							parsedNumber, err := strconv.ParseFloat(stringValue, 64)
 							if err == nil {
-								row.FieldsNumber.Key = append(row.FieldsNumber.Key, k)
-								row.FieldsNumber.Value = append(row.FieldsNumber.Value, parsedNumber)
+								row.FieldsNumber[k] = parsedNumber
 							} else {
-								row.FieldsString.Key = append(row.FieldsString.Key, k)
-								row.FieldsString.Value = append(row.FieldsString.Value, stringValue)
+								row.FieldsString[k] = stringValue
 							}
 						} else {
-							row.FieldsString.Key = append(row.FieldsString.Key, k)
-							row.FieldsString.Value = append(row.FieldsString.Value, stringValue)
+							row.FieldsString[k] = stringValue
 						}
 					}
 				}

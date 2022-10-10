@@ -3,25 +3,14 @@ package clickhouse
 import (
 	"database/sql"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/kobsio/klogs/pkg/log"
 
-	"github.com/ClickHouse/clickhouse-go"
+	"github.com/ClickHouse/clickhouse-go/v2"
 	"go.uber.org/zap"
 )
-
-// FieldString is the structure of the nested field for string values.
-type FieldString struct {
-	Key   []string
-	Value []string
-}
-
-// FieldNumber is the structure of the nested field for number values.
-type FieldNumber struct {
-	Key   []string
-	Value []float64
-}
 
 // Row is the structure of a single row in ClickHouse.
 type Row struct {
@@ -32,8 +21,8 @@ type Row struct {
 	Pod          string
 	Container    string
 	Host         string
-	FieldsString FieldString
-	FieldsNumber FieldNumber
+	FieldsString map[string]string
+	FieldsNumber map[string]float64
 	Log          string
 }
 
@@ -57,7 +46,7 @@ func (c *Client) Write(buffer []Row) error {
 		}
 	}
 
-	sql := fmt.Sprintf("INSERT INTO %s.logs(timestamp, cluster, namespace, app, pod_name, container_name, host, fields_string.key, fields_string.value, fields_number.key, fields_number.value, log) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) %s", c.database, settings)
+	sql := fmt.Sprintf("INSERT INTO %s.logs (timestamp, cluster, namespace, app, pod_name, container_name, host, fields_string, fields_number, log) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) %s", c.database, settings)
 
 	tx, err := c.client.Begin()
 	if err != nil {
@@ -72,7 +61,7 @@ func (c *Client) Write(buffer []Row) error {
 	}
 
 	for _, l := range buffer {
-		_, err = smt.Exec(l.Timestamp, l.Cluster, l.Namespace, l.App, l.Pod, l.Container, l.Host, l.FieldsString.Key, l.FieldsString.Value, l.FieldsNumber.Key, l.FieldsNumber.Value, l.Log)
+		_, err = smt.Exec(l.Timestamp, l.Cluster, l.Namespace, l.App, l.Pod, l.Container, l.Host, l.FieldsString, l.FieldsNumber, l.Log)
 
 		if err != nil {
 			log.Error(nil, "Statement exec failure", zap.Error(err))
@@ -95,16 +84,31 @@ func (c *Client) Close() error {
 
 // NewClient returns a new client for ClickHouse. The client can then be used to write data to ClickHouse via the
 // "Write" method.
-func NewClient(address, username, password, database, writeTimeout, readTimeout string, asyncInsert, waitForAsyncInsert bool) (*Client, error) {
-	dns := "tcp://" + address + "?username=" + username + "&password=" + password + "&database=" + database + "&write_timeout=" + writeTimeout + "&read_timeout=" + readTimeout
-
-	connect, err := sql.Open("clickhouse", dns)
+func NewClient(address, username, password, database, dialTimeout, connMaxLifetime string, maxIdleConns, maxOpenConns int, asyncInsert, waitForAsyncInsert bool) (*Client, error) {
+	parsedDialTimeout, err := time.ParseDuration(dialTimeout)
 	if err != nil {
-		log.Error(nil, "could not initialize database connection", zap.Error(err))
 		return nil, err
 	}
 
-	if err := connect.Ping(); err != nil {
+	parsedConnMaxLifetime, err := time.ParseDuration(connMaxLifetime)
+	if err != nil {
+		return nil, err
+	}
+
+	conn := clickhouse.OpenDB(&clickhouse.Options{
+		Addr: strings.Split(address, ","),
+		Auth: clickhouse.Auth{
+			Database: database,
+			Username: username,
+			Password: password,
+		},
+		DialTimeout: parsedDialTimeout,
+	})
+	conn.SetMaxIdleConns(maxIdleConns)
+	conn.SetMaxOpenConns(maxOpenConns)
+	conn.SetConnMaxLifetime(parsedConnMaxLifetime)
+
+	if err := conn.Ping(); err != nil {
 		if exception, ok := err.(*clickhouse.Exception); ok {
 			log.Error(nil, fmt.Sprintf("[%d] %s \n%s\n", exception.Code, exception.Message, exception.StackTrace))
 		} else {
@@ -115,7 +119,7 @@ func NewClient(address, username, password, database, writeTimeout, readTimeout 
 	}
 
 	return &Client{
-		client:             connect,
+		client:             conn,
 		database:           database,
 		asyncInsert:        asyncInsert,
 		waitForAsyncInsert: waitForAsyncInsert,

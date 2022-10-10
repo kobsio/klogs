@@ -62,4 +62,4 @@ spec:
             - name: dockerhub-registry
           containers:
             - name: clickhouse
-              image: yandex/clickhouse-server:21.12.3.32
+              image: clickhouse/clickhouse-server:22.8.1.2097

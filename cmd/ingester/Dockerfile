@@ -1,4 +1,4 @@
-FROM golang:1.17.3-alpine3.14 as build
+FROM golang:1.19.2-alpine3.16 as build
 RUN apk update && apk add git make
 WORKDIR /ingester
 COPY go.mod go.sum ./
