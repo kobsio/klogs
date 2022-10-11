@@ -42,11 +42,11 @@ CREATE TABLE IF NOT EXISTS logs.logs ON CLUSTER '{cluster}' AS logs.logs_local E
 To speedup queries for the most frequently queried fields we can create dedicated columns for specific fiels:
 
 ```sql
-ALTER TABLE logs.logs_local ON CLUSTER '{cluster}' ADD COLUMN content_level String DEFAULT fields_string.value[indexOf(fields_string.key, 'content.level')]
-ALTER TABLE logs.logs ON CLUSTER '{cluster}' ADD COLUMN content_level String DEFAULT fields_string.value[indexOf(fields_string.key, 'content.level')]
+ALTER TABLE logs.logs_local ON CLUSTER '{cluster}' ADD COLUMN content_level String DEFAULT fields_string['content.level']
+ALTER TABLE logs.logs ON CLUSTER '{cluster}' ADD COLUMN content_level String DEFAULT fields_string['content.level']
 
-ALTER TABLE logs.logs_local ON CLUSTER '{cluster}' ADD COLUMN content_response_code Float64 DEFAULT fields_number.value[indexOf(fields_number.key, 'content.response_code')]
-ALTER TABLE logs.logs ON CLUSTER '{cluster}' ADD COLUMN content_response_code Float64 DEFAULT fields_number.value[indexOf(fields_number.key, 'content.response_code')]
+ALTER TABLE logs.logs_local ON CLUSTER '{cluster}' ADD COLUMN content_response_code Float64 DEFAULT fields_number['content.response_code']
+ALTER TABLE logs.logs ON CLUSTER '{cluster}' ADD COLUMN content_response_code Float64 DEFAULT fields_number['content.response_code']
 ```
 
 But those columns will be materialized only for new data and after merges. In order to materialize those columns for old data:
