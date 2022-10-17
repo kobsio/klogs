@@ -140,17 +140,17 @@ func (consumer *Consumer) ConsumeClaim(session sarama.ConsumerGroupSession, clai
 					}
 				case "cluster":
 					row.Cluster = stringValue
-				case "kubernetes.namespace_name":
+				case "kubernetes_namespace_name":
 					row.Namespace = stringValue
-				case "kubernetes.labels.k8s-app":
+				case "kubernetes_labels_k8s-app":
 					row.App = stringValue
-				case "kubernetes.labels.app":
+				case "kubernetes_labels_app":
 					row.App = stringValue
-				case "kubernetes.pod_name":
+				case "kubernetes_pod_name":
 					row.Pod = stringValue
-				case "kubernetes.container_name":
+				case "kubernetes_container_name":
 					row.Container = stringValue
-				case "kubernetes.host":
+				case "kubernetes_host":
 					row.Host = stringValue
 				case "log":
 					row.Log = stringValue
