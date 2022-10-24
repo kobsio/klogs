@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/kobsio/klogs/pkg/clickhouse"
@@ -38,6 +39,7 @@ type Consumer struct {
 	clickhouseBatchSize         int64
 	clickhouseFlushInterval     time.Duration
 	clickhouseForceNumberFields []string
+	clickhouseForceUnderscores  bool
 	clickhouseClient            *clickhouse.Client
 }
 
@@ -155,18 +157,23 @@ func (consumer *Consumer) ConsumeClaim(session sarama.ConsumerGroupSession, clai
 				case "log":
 					row.Log = stringValue
 				default:
+					formattedKey := k
+					if consumer.clickhouseForceUnderscores {
+						formattedKey = strings.ReplaceAll(k, ".", "_")
+					}
+
 					if isNumber {
-						row.FieldsNumber[k] = numberValue
+						row.FieldsNumber[formattedKey] = numberValue
 					} else {
 						if contains(k, consumer.clickhouseForceNumberFields) {
 							parsedNumber, err := strconv.ParseFloat(stringValue, 64)
 							if err == nil {
-								row.FieldsNumber[k] = parsedNumber
+								row.FieldsNumber[formattedKey] = parsedNumber
 							} else {
-								row.FieldsString[k] = stringValue
+								row.FieldsString[formattedKey] = stringValue
 							}
 						} else {
-							row.FieldsString[k] = stringValue
+							row.FieldsString[formattedKey] = stringValue
 						}
 					}
 				}

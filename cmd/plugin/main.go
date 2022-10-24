@@ -24,13 +24,14 @@ import (
 )
 
 const (
-	defaultDatabase        string        = "logs"
-	defaultDialTimeout     string        = "10s"
-	defaultConnMaxLifetime string        = "1h"
-	defaultMaxIdleConns    int           = 5
-	defaultMaxOpenConns    int           = 10
-	defaultBatchSize       int64         = 10000
-	defaultFlushInterval   time.Duration = 60 * time.Second
+	defaultDatabase         string        = "logs"
+	defaultDialTimeout      string        = "10s"
+	defaultConnMaxLifetime  string        = "1h"
+	defaultMaxIdleConns     int           = 5
+	defaultMaxOpenConns     int           = 10
+	defaultBatchSize        int64         = 10000
+	defaultFlushInterval    time.Duration = 60 * time.Second
+	defaultForceUnderscores bool          = false
 )
 
 var (
@@ -38,6 +39,7 @@ var (
 	batchSize         int64
 	flushInterval     time.Duration
 	forceNumberFields []string
+	forceUnderscores  bool
 	lastFlush         = time.Now()
 	client            *clickhouse.Client
 )
@@ -154,6 +156,13 @@ func FLBPluginInit(plugin unsafe.Pointer) int {
 
 	forceNumberFieldsStr := output.FLBPluginConfigKey(plugin, "force_number_fields")
 	forceNumberFields = strings.Split(forceNumberFieldsStr, ",")
+
+	forceUnderscoresStr := output.FLBPluginConfigKey(plugin, "force_underscore")
+	forceUnderscores, err = strconv.ParseBool(forceUnderscoresStr)
+	if err != nil {
+		log.Warn(nil, "Could not parse forceUnderscores setting, use default setting", zap.Error(err), zap.Bool("default", defaultForceUnderscores))
+		forceUnderscores = defaultForceUnderscores
+	}
 
 	log.Info(nil, "Clickhouse configuration", zap.String("address", address), zap.String("username", username), zap.String("password", "*****"), zap.String("database", database), zap.String("dialTimeout", dialTimeout), zap.String("connMaxLifetime", connMaxLifetime), zap.Int("maxIdleConns", maxIdleConns), zap.Int("maxOpenConns", maxOpenConns), zap.Int64("batchSize", batchSize), zap.Duration("flushInterval", flushInterval))
 
@@ -276,18 +285,23 @@ func FLBPluginFlushCtx(ctx, data unsafe.Pointer, length C.int, tag *C.char) int 
 				case "log":
 					row.Log = stringValue
 				default:
+					formattedKey := k
+					if forceUnderscores {
+						formattedKey = strings.ReplaceAll(k, ".", "_")
+					}
+
 					if isNumber {
-						row.FieldsNumber[k] = numberValue
+						row.FieldsNumber[formattedKey] = numberValue
 					} else {
 						if contains(k, forceNumberFields) {
 							parsedNumber, err := strconv.ParseFloat(stringValue, 64)
 							if err == nil {
-								row.FieldsNumber[k] = parsedNumber
+								row.FieldsNumber[formattedKey] = parsedNumber
 							} else {
-								row.FieldsString[k] = stringValue
+								row.FieldsString[formattedKey] = stringValue
 							}
 						} else {
-							row.FieldsString[k] = stringValue
+							row.FieldsString[formattedKey] = stringValue
 						}
 					}
 				}
