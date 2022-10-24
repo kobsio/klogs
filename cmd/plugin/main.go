@@ -157,7 +157,7 @@ func FLBPluginInit(plugin unsafe.Pointer) int {
 	forceNumberFieldsStr := output.FLBPluginConfigKey(plugin, "force_number_fields")
 	forceNumberFields = strings.Split(forceNumberFieldsStr, ",")
 
-	forceUnderscoresStr := output.FLBPluginConfigKey(plugin, "force_underscore")
+	forceUnderscoresStr := output.FLBPluginConfigKey(plugin, "force_underscores")
 	forceUnderscores, err = strconv.ParseBool(forceUnderscoresStr)
 	if err != nil {
 		log.Warn(nil, "Could not parse forceUnderscores setting, use default setting", zap.Error(err), zap.Bool("default", defaultForceUnderscores))
