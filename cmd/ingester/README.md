@@ -23,6 +23,7 @@ An example Deployment for the ClickHouse ingester can be found in the [ingester.
 | `--clickhouse.batch-size` | `CLICKHOUSE_BATCH_SIZE` | The size for how many log lines should be buffered, before they are written to ClickHouse. | `100000` |
 | `--clickhouse.flush-interval` | `CLICKHOUSE_FLUSH_INTERVAL` | The maximum amount of time to wait, before logs are written to ClickHouse. | `60s` |
 | `--clickhouse.force-number-fields` | `CLICKHOUSE_FORCE_NUMBER_FIELDS` | A list of fields which should be parsed as number. | `[]` |
+| `--clickhouse.force-underscores` | `CLICKHOUSE_FORCE_UNDERSCORES` | Replace all `.` with `_` in keys. | `false` |
 | `--kafka.brokers` | `KAFKA_BROKERS` | Kafka bootstrap brokers to connect to, as a comma separated list | |
 | `--kafka.group` | `KAFKA_GROUP` | Kafka consumer group definition | `kafka-clickhouse` |
 | `--kafka.version` | `KAFKA_VERSION` | Kafka cluster version | `2.1.1` |

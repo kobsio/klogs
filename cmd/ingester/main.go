@@ -34,6 +34,7 @@ var (
 	clickhouseBatchSize          int64
 	clickhouseFlushInterval      time.Duration
 	clickhouseForceNumberFields  []string
+	clickhouseForceUnderscores   bool
 	kafkaBrokers                 string
 	kafkaGroup                   string
 	kafkaVersion                 string
@@ -137,6 +138,15 @@ func init() {
 		defaultClickHouseForceNumberFields = strings.Split(defaultClickHouseForceNumberFieldsString, ",")
 	}
 
+	defaultClickHouseForceUnderscores := false
+	if os.Getenv("CLICKHOUSE_FORCE_UNDERSCORES") != "" {
+		defaultClickHouseForceUnderscoresString := os.Getenv("CLICKHOUSE_FORCE_UNDERSCORES")
+		defaultClickHouseForceUnderscoresParsed, err := strconv.ParseBool(defaultClickHouseForceUnderscoresString)
+		if err != nil {
+			defaultClickHouseForceUnderscores = defaultClickHouseForceUnderscoresParsed
+		}
+	}
+
 	defaultKafkaBrokers := ""
 	if os.Getenv("KAFKA_BROKERS") != "" {
 		defaultKafkaBrokers = os.Getenv("KAFKA_BROKERS")
@@ -185,6 +195,7 @@ func init() {
 	flag.Int64Var(&clickhouseBatchSize, "clickhouse.batch-size", defaultClickHouseBatchSize, "The size for how many log lines should be buffered, before they are written to ClickHouse.")
 	flag.DurationVar(&clickhouseFlushInterval, "clickhouse.flush-interval", defaultClickHouseFlushInterval, "The maximum amount of time to wait, before logs are written to ClickHouse.")
 	flag.StringArrayVar(&clickhouseForceNumberFields, "clickhouse.force-number-fields", defaultClickHouseForceNumberFields, "A list of fields which should be parsed as number.")
+	flag.BoolVar(&clickhouseForceUnderscores, "clickhouse.force-underscores", defaultClickHouseForceUnderscores, "Replace all \".\" with \"_\" in keys.")
 
 	flag.StringVar(&kafkaBrokers, "kafka.brokers", defaultKafkaBrokers, "Kafka bootstrap brokers to connect to, as a comma separated list.")
 	flag.StringVar(&kafkaGroup, "kafka.group", defaultKafkaGroup, "Kafka consumer group definition.")
@@ -273,6 +284,6 @@ func main() {
 		log.Fatal(nil, "Could not create ClickHouse client", zap.Error(err))
 	}
 
-	kafka.Run(kafkaBrokers, kafkaGroup, kafkaVersion, kafkaTopics, kafkaTimestampKey, clickhouseBatchSize, clickhouseFlushInterval, clickhouseForceNumberFields, client)
+	kafka.Run(kafkaBrokers, kafkaGroup, kafkaVersion, kafkaTopics, kafkaTimestampKey, clickhouseBatchSize, clickhouseFlushInterval, clickhouseForceNumberFields, clickhouseForceUnderscores, client)
 	server.Shutdown(context.Background())
 }
