@@ -78,7 +78,7 @@ func init() {
 		defaultClickHouseConnMaxLifetime = os.Getenv("CLICKHOUSE_CONN_MAX_LIFETIME")
 	}
 
-	defaultClickHouseMaxIdleConns := 5
+	defaultClickHouseMaxIdleConns := 1
 	if os.Getenv("CLICKHOUSE_MAX_IDLE_CONNS") != "" {
 		defaultClickHouseMaxIdleConnsString := os.Getenv("CLICKHOUSE_MAX_IDLE_CONNS")
 		defaultClickHouseMaxIdleConnsParsed, err := strconv.Atoi(defaultClickHouseMaxIdleConnsString)
@@ -87,7 +87,7 @@ func init() {
 		}
 	}
 
-	defaultClickHouseMaxOpenConns := 10
+	defaultClickHouseMaxOpenConns := 1
 	if os.Getenv("CLICKHOUSE_MAX_OPEN_CONNS") != "" {
 		defaultClickHouseMaxOpenConnsString := os.Getenv("CLICKHOUSE_MAX_OPEN_CONNS")
 		defaultClickHouseMaxOpenConnsParsed, err := strconv.Atoi(defaultClickHouseMaxOpenConnsString)
