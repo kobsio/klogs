@@ -27,8 +27,8 @@ const (
 	defaultDatabase         string        = "logs"
 	defaultDialTimeout      string        = "10s"
 	defaultConnMaxLifetime  string        = "1h"
-	defaultMaxIdleConns     int           = 5
-	defaultMaxOpenConns     int           = 10
+	defaultMaxIdleConns     int           = 1
+	defaultMaxOpenConns     int           = 1
 	defaultBatchSize        int64         = 10000
 	defaultFlushInterval    time.Duration = 60 * time.Second
 	defaultForceUnderscores bool          = false
