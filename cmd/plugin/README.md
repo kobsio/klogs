@@ -10,6 +10,7 @@ An example configuration file can be found in the [fluent-bit-cm.yaml](../../clu
 
 | Option | Description | Default |
 | ------ | ----------- | ------- |
+| `Metrics_Server_Address` | The address, where the metrics server should listen on. | `:2021` |
 | `Address` | The address, where ClickHouse is listining on, e.g. `clickhouse-clickhouse.clickhouse.svc.cluster.local:9000`. | |
 | `Database` | The name of the database for the logs. | `logs` |
 | `Username` | The username, to authenticate to ClickHouse. | |

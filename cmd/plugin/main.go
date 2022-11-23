@@ -22,16 +22,18 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
+import "github.com/kobsio/klogs/pkg/metrics"
 
 const (
-	defaultDatabase         string        = "logs"
-	defaultDialTimeout      string        = "10s"
-	defaultConnMaxLifetime  string        = "1h"
-	defaultMaxIdleConns     int           = 1
-	defaultMaxOpenConns     int           = 1
-	defaultBatchSize        int64         = 10000
-	defaultFlushInterval    time.Duration = 60 * time.Second
-	defaultForceUnderscores bool          = false
+	defaultMetricsServerAddress string        = ":2021"
+	defaultDatabase             string        = "logs"
+	defaultDialTimeout          string        = "10s"
+	defaultConnMaxLifetime      string        = "1h"
+	defaultMaxIdleConns         int           = 1
+	defaultMaxOpenConns         int           = 1
+	defaultBatchSize            int64         = 10000
+	defaultFlushInterval        time.Duration = 60 * time.Second
+	defaultForceUnderscores     bool          = false
 )
 
 var (
@@ -42,6 +44,7 @@ var (
 	forceUnderscores  bool
 	lastFlush         = time.Now()
 	client            *clickhouse.Client
+	metricsServer     metrics.Server
 )
 
 //export FLBPluginRegister
@@ -93,6 +96,21 @@ func FLBPluginInit(plugin unsafe.Pointer) int {
 	log.Info(nil, "Version information", version.Info()...)
 	log.Info(nil, "Build context", version.BuildContext()...)
 
+	// Read the configuration for the address where the metrics server should listen on. Then create a new metrics
+	// server and start the server in a new Go routine via the `Start` method.
+	//
+	// When the plugin exits the metrics server should be stopped via the `Stop` method.
+	metricsServerAddress := output.FLBPluginConfigKey(plugin, "metrics_server_address")
+	if metricsServerAddress == "" {
+		metricsServerAddress = defaultMetricsServerAddress
+	}
+
+	metricsServer = metrics.New(metricsServerAddress)
+	go metricsServer.Start()
+
+	// Read all configuration values required for the ClickHouse client. Once we have all configuration values we
+	// create a new ClickHouse client, which can then be used to write the logs from Fluent Bit into ClickHouse when the
+	// FLBPluginFlushCtx function is called.
 	address := output.FLBPluginConfigKey(plugin, "address")
 
 	database = output.FLBPluginConfigKey(plugin, "database")
@@ -192,6 +210,8 @@ func FLBPluginFlushCtx(ctx, data unsafe.Pointer, length C.int, tag *C.char) int 
 		if ret != 0 {
 			break
 		}
+
+		metrics.InputRecordsTotalMetric.Inc()
 
 		var timestamp time.Time
 		switch t := ts.(type) {
@@ -312,18 +332,22 @@ func FLBPluginFlushCtx(ctx, data unsafe.Pointer, length C.int, tag *C.char) int 
 	}
 
 	startFlushTime := time.Now()
-	if client.BufferLen() < int(batchSize) && lastFlush.Add(flushInterval).After(startFlushTime) {
+	currentBatchSize := client.BufferLen()
+	if currentBatchSize < int(batchSize) && lastFlush.Add(flushInterval).After(startFlushTime) {
 		return output.FLB_OK
 	}
 
-	log.Info(nil, "Start flushing", zap.Int("batchSize", client.BufferLen()), zap.Duration("flushInterval", startFlushTime.Sub(lastFlush)))
+	log.Info(nil, "Start flushing", zap.Int("batchSize", currentBatchSize), zap.Duration("flushInterval", startFlushTime.Sub(lastFlush)))
 	err := client.BufferWrite()
 	if err != nil {
+		metrics.ErrorsTotalMetric.Inc()
 		log.Error(nil, "Error while writing buffer", zap.Error(err))
 		return output.FLB_ERROR
 	}
 
 	lastFlush = time.Now()
+	metrics.BatchSizeMetric.Observe(float64(currentBatchSize))
+	metrics.FlushTimeSecondsMetric.Observe(lastFlush.Sub(startFlushTime).Seconds())
 	log.Info(nil, "End flushing", zap.Duration("flushTime", lastFlush.Sub(startFlushTime)))
 
 	return output.FLB_OK
@@ -337,6 +361,7 @@ func FLBPluginExit() int {
 
 //export FLBPluginExitCtx
 func FLBPluginExitCtx(ctx unsafe.Pointer) int {
+	metricsServer.Stop()
 	return output.FLB_OK
 }
 

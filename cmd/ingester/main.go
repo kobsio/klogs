@@ -1,9 +1,7 @@
 package main
 
 import (
-	"context"
 	"fmt"
-	"net/http"
 	"os"
 	"strconv"
 	"strings"
@@ -12,15 +10,16 @@ import (
 	"github.com/kobsio/klogs/pkg/clickhouse"
 	"github.com/kobsio/klogs/pkg/kafka"
 	"github.com/kobsio/klogs/pkg/log"
+	"github.com/kobsio/klogs/pkg/metrics"
 	"github.com/kobsio/klogs/pkg/version"
 
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	flag "github.com/spf13/pflag"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
 
 var (
+	metricsServerAddress         string
 	clickhouseAddress            string
 	clickhouseUsername           string
 	clickhousePassword           string
@@ -48,6 +47,11 @@ var (
 // init is used to set the defaults for all configuration parameters and to set all flags and environment variables, for
 // the ClickHouse, Kafka and logging configuration.
 func init() {
+	defaultMetricsServerAddress := ":2021"
+	if os.Getenv("METRICS_SERVER_ADDRESS") != "" {
+		defaultMetricsServerAddress = os.Getenv("METRICS_SERVER_ADDRESS")
+	}
+
 	defaultCickhouseAddress := ""
 	if os.Getenv("CLICKHOUSE_ADDRESS") != "" {
 		defaultCickhouseAddress = os.Getenv("CLICKHOUSE_ADDRESS")
@@ -182,6 +186,8 @@ func init() {
 		defaultLogLevel = os.Getenv("LOG_LEVEL")
 	}
 
+	flag.StringVar(&metricsServerAddress, "metrics-server.address", defaultMetricsServerAddress, "The address, where the metrics server should listen on.")
+
 	flag.StringVar(&clickhouseAddress, "clickhouse.address", defaultCickhouseAddress, "ClickHouse address to connect to.")
 	flag.StringVar(&clickhouseUsername, "clickhouse.username", defaultClickHouseUsername, "ClickHouse username for the connection.")
 	flag.StringVar(&clickhousePassword, "clickhouse.password", defaultClickHousePassword, "ClickHouse password for the connection.")
@@ -261,20 +267,10 @@ func main() {
 	log.Info(nil, "Clickhouse configuration", zap.String("clickhouseAddress", clickhouseAddress), zap.String("clickhouseUsername", clickhouseUsername), zap.String("clickhousePassword", "*****"), zap.String("clickhouseDatabase", clickhouseDatabase), zap.String("clickhouseDialTimeout", clickhouseDialTimeout), zap.String("clickhouseConnMaxLifetime", clickhouseConnMaxLifetime), zap.Int("clickhouseMaxIdleConns", clickhouseMaxIdleConns), zap.Int("clickhouseMaxOpenConns", clickhouseMaxOpenConns), zap.Int64("clickhouseBatchSize", clickhouseBatchSize), zap.Duration("clickhouseFlushInterval", clickhouseFlushInterval))
 	log.Info(nil, "Kafka configuration", zap.String("kafkaBrokers", kafkaBrokers), zap.String("kafkaGroup", kafkaGroup), zap.String("kafkaVersion", kafkaVersion), zap.String("kafkaTopics", kafkaTopics))
 
-	// Create a http server, which can be used for the liveness and readiness probe in Kubernetes. The server also
-	// serves our Prometheus metrics.
-	router := http.NewServeMux()
-	router.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintf(w, "OK")
-	})
-	router.Handle("/metrics", promhttp.Handler())
-
-	server := http.Server{
-		Addr:    ":8080",
-		Handler: router,
-	}
-
-	go server.ListenAndServe()
+	// Create the metrics server, which serves the Prometheus metrics for the ingester. The server can also be used to
+	// define a readiness and liveness probe.
+	metricsServer := metrics.New(metricsServerAddress)
+	go metricsServer.Start()
 
 	// Create a new client for the configured ClickHouse instance. Then pass the ClickHouse client to the Run function
 	// of the Kafka package, which listens for message in the configured Kafka instance. These messages are then written
@@ -285,5 +281,5 @@ func main() {
 	}
 
 	kafka.Run(kafkaBrokers, kafkaGroup, kafkaVersion, kafkaTopics, kafkaTimestampKey, clickhouseBatchSize, clickhouseFlushInterval, clickhouseForceNumberFields, clickhouseForceUnderscores, client)
-	server.Shutdown(context.Background())
+	metricsServer.Stop()
 }
