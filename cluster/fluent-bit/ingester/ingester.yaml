@@ -30,7 +30,7 @@ spec:
             - --log.format=json
             - --log.level=trace
           ports:
-            - containerPort: 8080
+            - containerPort: 2021
               name: http
           livenessProbe:
             httpGet:

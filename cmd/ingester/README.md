@@ -10,6 +10,7 @@ An example Deployment for the ClickHouse ingester can be found in the [ingester.
 
 | Command-Line Flag | Environment Variable | Description | Default |
 | ----------------- | -------------------- | ----------- | ------- |
+| `--metrics-server.address` | `METRICS_SERVER_ADDRESS` | The address, where the metrics server should listen on. | `:2021` |
 | `--clickhouse.address` | `CLICKHOUSE_ADDRESS` | ClickHouse address to connect to. | |
 | `--clickhouse.database` | `CLICKHOUSE_DATABASE` | ClickHouse database name. | `logs` |
 | `--clickhouse.username` | `CLICKHOUSE_USERNAME` | ClickHouse username for the connection. | |
