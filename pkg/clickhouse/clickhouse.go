@@ -77,6 +77,8 @@ func (c *Client) BufferWrite() error {
 		return err
 	}
 
+	defer tx.Rollback()
+
 	stmt, err := tx.Prepare(sql)
 	if err != nil {
 		log.Error(nil, "Prepare statement failure", zap.Error(err))
