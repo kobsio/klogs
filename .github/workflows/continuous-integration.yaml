@@ -1,12 +1,17 @@
-name: Test
+name: Continuous Integration
 
 on:
   push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
 
 jobs:
-  test:
-    name: Test
-    runs-on: ubuntu-20.04
+  go:
+    name: Go
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -16,25 +21,21 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v3
         with:
-          go-version: 1.19
-
-      - name: Cache Go
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cache/go-build
-            ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
+          go-version-file: go.mod
+          cache: true
+          cache-dependency-path: go.sum
 
       - name: Download Dependencies
         run: |
           go mod download
 
+      - name: Vet
+        run: |
+          make vet
+
       - name: Test
         run: |
-          go test ./...
+          make test
 
       - name: Build Plugin
         run: |
