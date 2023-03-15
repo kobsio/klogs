@@ -22,3 +22,11 @@ build-ingester:
 		-X ${REPO}/pkg/version.BuildUser=${BUILDUSER} \
 		-X ${REPO}/pkg/version.BuildDate=${BUILDTIME}" \
 		-o ingester ./cmd/ingester;
+
+.PHONY: vet
+vet:
+	@go vet ./...
+
+.PHONY: test
+test:
+	@go test ./...
