@@ -6,7 +6,7 @@ RUN go mod download
 COPY . .
 RUN make build-ingester
 
-FROM alpine:3.18.2
+FROM alpine:3.17.4
 RUN apk update && apk add --no-cache ca-certificates
 RUN mkdir /ingester
 COPY --from=build /ingester/ingester /ingester
