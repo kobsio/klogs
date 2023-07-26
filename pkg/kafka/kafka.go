@@ -12,7 +12,7 @@ import (
 	"github.com/kobsio/klogs/pkg/clickhouse"
 	"github.com/kobsio/klogs/pkg/log"
 
-	"github.com/Shopify/sarama"
+	"github.com/IBM/sarama"
 	"go.uber.org/zap"
 )
 
