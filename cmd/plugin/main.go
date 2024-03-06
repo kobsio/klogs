@@ -47,6 +47,23 @@ var (
 	metricsServer     metrics.Server
 )
 
+func getTimestamp(ts interface{}) time.Time {
+	switch t := ts.(type) {
+	case output.FLBTime:
+		return ts.(output.FLBTime).Time
+	case uint64:
+		return time.Unix(int64(t), 0)
+	// Since Fluent Bit v2.1.0, Event format is represented as 2-element array with a nested array as the first element
+	// The timestamp field is allocated in the first position of that nested array: [[TIMESTAMP, METADATA], MESSAGE]
+	// https://docs.fluentbit.io/manual/concepts/key-concepts#event-format
+	case []interface{}:
+		return getTimestamp(ts.([]interface{})[0])
+	default:
+		log.Warn(nil, "The provided time is invalid, defaulting to now")
+		return time.Now()
+	}
+}
+
 //export FLBPluginRegister
 func FLBPluginRegister(def unsafe.Pointer) int {
 	return output.FLBPluginRegister(def, "clickhouse", "ClickHouse Output Plugin for Fluent Bit")
@@ -213,16 +230,7 @@ func FLBPluginFlushCtx(ctx, data unsafe.Pointer, length C.int, tag *C.char) int 
 
 		metrics.InputRecordsTotalMetric.Inc()
 
-		var timestamp time.Time
-		switch t := ts.(type) {
-		case output.FLBTime:
-			timestamp = ts.(output.FLBTime).Time
-		case uint64:
-			timestamp = time.Unix(int64(t), 0)
-		default:
-			log.Warn(nil, "The provided time is invalid, defaulting to now")
-			timestamp = time.Now()
-		}
+		timestamp := getTimestamp(ts)
 
 		data, err := flatten.Flatten(record)
 		if err != nil {
