@@ -1,5 +1,5 @@
-# We can't go past 1.20.X until this issue is solved: https://github.com/golang/go/issues/62130#issuecomment-1687335898
-FROM golang:1.20.7 as build
+# We can't go past 1.20.2 until this issue is solved: https://github.com/golang/go/issues/62130#issuecomment-1687335898
+FROM golang:1.20.2 as build
 WORKDIR /root
 COPY go.mod go.sum ./
 RUN go mod download

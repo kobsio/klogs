@@ -1,5 +1,6 @@
 module github.com/kobsio/klogs
 
+// We can't go past 1.20.2 until this issue is solved: https://github.com/golang/go/issues/62130#issuecomment-1687335898
 go 1.20
 
 require (
