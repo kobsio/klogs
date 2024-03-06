@@ -1,0 +1,45 @@
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    assignees:
+      - "ricoberger"
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+
+  - package-ecosystem: "docker"
+    directory: "/cmd/plugin"
+    schedule:
+      interval: "monthly"
+    assignees:
+      - "ricoberger"
+    groups:
+      docker-plugin:
+        patterns:
+          - "*"
+
+  - package-ecosystem: "docker"
+    directory: "/cmd/ingester"
+    schedule:
+      interval: "monthly"
+    assignees:
+      - "ricoberger"
+    groups:
+      docker-ingester:
+        patterns:
+          - "*"
+
+  - package-ecosystem: "gomod"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    assignees:
+      - "ricoberger"
+    groups:
+      gomod:
+        patterns:
+          - "*"
