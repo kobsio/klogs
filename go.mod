@@ -1,8 +1,6 @@
 module github.com/kobsio/klogs
 
-go 1.22
-
-toolchain go1.22.0
+go 1.20
 
 require (
 	github.com/ClickHouse/clickhouse-go/v2 v2.20.0
