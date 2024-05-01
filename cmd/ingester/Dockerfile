@@ -1,5 +1,5 @@
 # We can't go past 1.20.2 until this issue is solved: https://github.com/golang/go/issues/62130#issuecomment-1687335898
-FROM golang:1.20.2-alpine3.17 as build
+FROM golang:1.21.5-alpine3.17 as build
 RUN apk update && apk add git make
 WORKDIR /ingester
 COPY go.mod go.sum ./
