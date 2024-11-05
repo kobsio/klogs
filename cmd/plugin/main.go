@@ -369,7 +369,14 @@ func FLBPluginExit() int {
 
 //export FLBPluginExitCtx
 func FLBPluginExitCtx(ctx unsafe.Pointer) int {
-	metricsServer.Stop()
+	log.Info(nil, "Shutdown Fluent Bit plugin")
+	defer metricsServer.Stop()
+
+	err := client.BufferWrite()
+	if err != nil {
+		log.Error(nil, "Error while writing buffer", zap.Error(err))
+		return output.FLB_ERROR
+	}
 	return output.FLB_OK
 }
 
