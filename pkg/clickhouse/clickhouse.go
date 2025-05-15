@@ -3,14 +3,12 @@ package clickhouse
 import (
 	"database/sql"
 	"fmt"
+	"log/slog"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/kobsio/klogs/pkg/log"
-
 	"github.com/ClickHouse/clickhouse-go/v2"
-	"go.uber.org/zap"
 )
 
 // Row is the structure of a single row in ClickHouse.
@@ -27,7 +25,8 @@ type Row struct {
 	Log          string
 }
 
-// Client can be used to write data to a ClickHouse instance. The client can be created via the NewClient function.
+// Client can be used to write data to a ClickHouse instance. The client can be
+// created via the NewClient function.
 type Client struct {
 	client             *sql.DB
 	database           string
@@ -37,8 +36,8 @@ type Client struct {
 	buffer             []Row
 }
 
-// BufferAdd adds a new row to the Clickhouse buffer. This doesn't write the added row. To write the rows in the buffer
-// the `write` method must be called.
+// BufferAdd adds a new row to the Clickhouse buffer. This doesn't write the
+// added row. To write the rows in the buffer the `write` method must be called.
 func (c *Client) BufferAdd(row Row) {
 	c.bufferMutex.Lock()
 	defer c.bufferMutex.Unlock()
@@ -54,7 +53,8 @@ func (c *Client) BufferLen() int {
 	return len(c.buffer)
 }
 
-// BufferWrite writes a list of rows from the buffer to the configured ClickHouse instance.
+// BufferWrite writes a list of rows from the buffer to the configured
+// ClickHouse instance.
 func (c *Client) BufferWrite() error {
 	c.bufferMutex.Lock()
 	defer c.bufferMutex.Unlock()
@@ -69,11 +69,12 @@ func (c *Client) BufferWrite() error {
 		}
 	}
 
+	// #nosec G201
 	sql := fmt.Sprintf("INSERT INTO %s.logs (timestamp, cluster, namespace, app, pod_name, container_name, host, fields_string, fields_number, log) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) %s", c.database, settings)
 
 	tx, err := c.client.Begin()
 	if err != nil {
-		log.Error(nil, "Begin transaction failure", zap.Error(err))
+		slog.Error("Begin transaction failure", slog.Any("error", err))
 		return err
 	}
 
@@ -81,7 +82,7 @@ func (c *Client) BufferWrite() error {
 
 	stmt, err := tx.Prepare(sql)
 	if err != nil {
-		log.Error(nil, "Prepare statement failure", zap.Error(err))
+		slog.Error("Prepare statement failure", slog.Any("error", err))
 		return err
 	}
 
@@ -89,13 +90,13 @@ func (c *Client) BufferWrite() error {
 		_, err = stmt.Exec(l.Timestamp, l.Cluster, l.Namespace, l.App, l.Pod, l.Container, l.Host, l.FieldsString, l.FieldsNumber, l.Log)
 
 		if err != nil {
-			log.Error(nil, "Statement exec failure", zap.Error(err))
+			slog.Error("Statement exec failure", slog.Any("error", err))
 			return err
 		}
 	}
 
 	if err = tx.Commit(); err != nil {
-		log.Error(nil, "Commit failed failure", zap.Error(err))
+		slog.Error("Commit failure", slog.Any("error", err))
 		return err
 	}
 
@@ -108,8 +109,8 @@ func (c *Client) Close() error {
 	return c.client.Close()
 }
 
-// NewClient returns a new client for ClickHouse. The client can then be used to write data to ClickHouse via the
-// "Write" method.
+// NewClient returns a new client for ClickHouse. The client can then be used to
+// write data to ClickHouse via the "Write" method.
 func NewClient(address, username, password, database, dialTimeout, connMaxLifetime string, maxIdleConns, maxOpenConns int, asyncInsert, waitForAsyncInsert bool) (*Client, error) {
 	parsedDialTimeout, err := time.ParseDuration(dialTimeout)
 	if err != nil {
@@ -136,9 +137,9 @@ func NewClient(address, username, password, database, dialTimeout, connMaxLifeti
 
 	if err := conn.Ping(); err != nil {
 		if exception, ok := err.(*clickhouse.Exception); ok {
-			log.Error(nil, fmt.Sprintf("[%d] %s \n%s\n", exception.Code, exception.Message, exception.StackTrace))
+			slog.Error(fmt.Sprintf("[%d] %s \n%s\n", exception.Code, exception.Message, exception.StackTrace))
 		} else {
-			log.Error(nil, "could not ping database", zap.Error(err))
+			slog.Error("Failed to ping database", slog.Any("error", err))
 		}
 
 		return nil, err

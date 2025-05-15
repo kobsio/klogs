@@ -1,0 +1,101 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: clickhouse-bootstrap
+  namespace: kube-system
+data:
+  01_create_databases.sh: |
+    #!/bin/bash
+    set -e
+    clickhouse client -n <<-EOSQL
+      CREATE DATABASE IF NOT EXISTS logs ENGINE=Atomic;
+    EOSQL
+  02_create_tables.sh: |
+    #!/bin/bash
+    set -e
+    clickhouse client -n <<-EOSQL
+      CREATE TABLE IF NOT EXISTS logs.logs_local
+      (
+          timestamp DateTime64(3) CODEC(Delta, LZ4),
+          cluster LowCardinality(String),
+          namespace LowCardinality(String),
+          app LowCardinality(String),
+          pod_name LowCardinality(String),
+          container_name LowCardinality(String),
+          host LowCardinality(String),
+          fields_string Map(LowCardinality(String), String),
+          fields_number Map(LowCardinality(String), Float64),
+          log String CODEC(ZSTD(1))
+      )
+      ENGINE = MergeTree
+      PARTITION BY toDate(timestamp)
+      ORDER BY (cluster, namespace, app, pod_name, container_name, host, timestamp)
+      TTL toDateTime(timestamp) + INTERVAL 30 DAY;
+
+      CREATE TABLE IF NOT EXISTS logs.logs AS logs.logs_local ENGINE = Distributed('{cluster}', logs, logs_local, rand());
+    EOSQL
+
+---
+apiVersion: clickhouse.altinity.com/v1
+kind: ClickHouseInstallation
+metadata:
+  name: clickhouse
+  namespace: kube-system
+  labels:
+    app: clickhouse
+spec:
+  defaults:
+    templates:
+      serviceTemplate: default
+      dataVolumeClaimTemplate: default
+      podTemplate: default
+
+  configuration:
+    clusters:
+      - name: example
+
+    users:
+      admin/password: admin
+      admin/networks/ip: "::/0"
+      admin/access_management: "1"
+
+  templates:
+    serviceTemplates:
+      - name: default
+        generateName: "clickhouse-{chi}"
+        spec:
+          ports:
+            - name: http
+              port: 8123
+            - name: tcp
+              port: 9000
+            - name: interserver
+              port: 9009
+          type: ClusterIP
+          clusterIP: None
+
+    volumeClaimTemplates:
+      - name: default
+        spec:
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              storage: 10Gi
+
+    podTemplates:
+      - name: default
+        podDistribution:
+          - type: ShardAntiAffinity
+        spec:
+          containers:
+            - name: clickhouse
+              image: clickhouse/clickhouse-server:25.4.3.22
+              volumeMounts:
+                - name: bootstrap
+                  mountPath: /docker-entrypoint-initdb.d
+          volumes:
+            - name: bootstrap
+              configMap:
+                name: clickhouse-bootstrap
