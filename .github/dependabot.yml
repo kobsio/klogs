@@ -5,32 +5,29 @@ updates:
     directory: "/"
     schedule:
       interval: "monthly"
+    reviewers:
+      - "@kobsio/maintainers"
     assignees:
       - "ricoberger"
+    labels:
+      - "changelog: changed"
     groups:
       github-actions:
         patterns:
           - "*"
 
   - package-ecosystem: "docker"
-    directory: "/cmd/plugin"
+    directory: "/"
     schedule:
       interval: "monthly"
+    reviewers:
+      - "@kobsio/maintainers"
     assignees:
       - "ricoberger"
+    labels:
+      - "changelog: changed"
     groups:
       docker-plugin:
-        patterns:
-          - "*"
-
-  - package-ecosystem: "docker"
-    directory: "/cmd/ingester"
-    schedule:
-      interval: "monthly"
-    assignees:
-      - "ricoberger"
-    groups:
-      docker-ingester:
         patterns:
           - "*"
 
@@ -38,8 +35,12 @@ updates:
     directory: "/"
     schedule:
       interval: "monthly"
+    reviewers:
+      - "@kobsio/maintainers"
     assignees:
       - "ricoberger"
+    labels:
+      - "changelog: changed"
     groups:
       gomod:
         patterns:
