@@ -2,12 +2,11 @@ package version
 
 import (
 	"fmt"
+	"log/slog"
 	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 )
 
 func TestPrint(t *testing.T) {
@@ -19,9 +18,9 @@ func TestPrint(t *testing.T) {
 	BuildUser = "root"
 	BuildDate = "2021-12-23@09:46:17"
 
-	version, err := Print("kobs")
+	version, err := Print("klogs")
 	require.NoError(t, err)
-	require.Equal(t, fmt.Sprintf("kobs, version v0.7.0-29-gcc373f2 (branch: main, revision: cc373f263575773f1349bbd354e803cc85f9edcd)\n  build user:       root\n  build date:       2021-12-23@09:46:17\n  go version:       %s", goVersion), version)
+	require.Equal(t, fmt.Sprintf("klogs, version v0.7.0-29-gcc373f2 (branch: main, revision: cc373f263575773f1349bbd354e803cc85f9edcd)\n  build user:       root\n  build date:       2021-12-23@09:46:17\n  go version:       %s", goVersion), version)
 }
 
 func TestInfo(t *testing.T) {
@@ -30,7 +29,7 @@ func TestInfo(t *testing.T) {
 	Branch = "main"
 
 	fields := Info()
-	require.Equal(t, []zapcore.Field{zap.String("version", "v0.7.0-29-gcc373f2"), zap.String("branch", "main"), zap.String("revision", "cc373f263575773f1349bbd354e803cc85f9edcd")}, fields)
+	require.Equal(t, []slog.Attr{slog.String("version", "v0.7.0-29-gcc373f2"), slog.String("branch", "main"), slog.String("revision", "cc373f263575773f1349bbd354e803cc85f9edcd")}, fields)
 }
 
 func TestBuildContext(t *testing.T) {
@@ -40,5 +39,5 @@ func TestBuildContext(t *testing.T) {
 	BuildDate = "2021-12-23@09:46:17"
 
 	fields := BuildContext()
-	require.Equal(t, []zapcore.Field{zap.String("go", goVersion), zap.String("user", "root"), zap.String("date", "2021-12-23@09:46:17")}, fields)
+	require.Equal(t, []slog.Attr{slog.String("go", goVersion), slog.String("user", "root"), slog.String("date", "2021-12-23@09:46:17")}, fields)
 }

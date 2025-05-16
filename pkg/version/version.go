@@ -2,12 +2,10 @@ package version
 
 import (
 	"bytes"
+	"log/slog"
 	"runtime"
 	"strings"
 	"text/template"
-
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 )
 
 // Build information. Populated at build-time.
@@ -41,6 +39,7 @@ func Print(program string) (string, error) {
 	}
 
 	var buf bytes.Buffer
+
 	tmpl := template.Must(template.New("version").Parse(versionInfoTmpl))
 	tmpl.ExecuteTemplate(&buf, "version", data)
 
@@ -48,11 +47,19 @@ func Print(program string) (string, error) {
 }
 
 // Info returns version, branch and revision information.
-func Info() []zapcore.Field {
-	return []zapcore.Field{zap.String("version", Version), zap.String("branch", Branch), zap.String("revision", Revision)}
+func Info() []slog.Attr {
+	return []slog.Attr{
+		slog.String("version", Version),
+		slog.String("branch", Branch),
+		slog.String("revision", Revision),
+	}
 }
 
 // BuildContext returns goVersion, buildUser and buildDate information.
-func BuildContext() []zapcore.Field {
-	return []zapcore.Field{zap.String("go", GoVersion), zap.String("user", BuildUser), zap.String("date", BuildDate)}
+func BuildContext() []slog.Attr {
+	return []slog.Attr{
+		slog.String("go", GoVersion),
+		slog.String("user", BuildUser),
+		slog.String("date", BuildDate),
+	}
 }
