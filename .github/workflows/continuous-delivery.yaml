@@ -43,7 +43,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and Push Docker Image (webhook)
+      - name: Build and Push Docker Image
         id: docker_build_webhook
         uses: docker/build-push-action@v6
         with:
