@@ -1,6 +1,7 @@
 package clickhouse
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"log/slog"
@@ -56,6 +57,8 @@ func (c *Client) BufferLen() int {
 // BufferWrite writes a list of rows from the buffer to the configured
 // ClickHouse instance.
 func (c *Client) BufferWrite() error {
+	ctx := context.Background()
+
 	c.bufferMutex.Lock()
 	defer c.bufferMutex.Unlock()
 
@@ -72,7 +75,7 @@ func (c *Client) BufferWrite() error {
 	// #nosec G201
 	sql := fmt.Sprintf("INSERT INTO %s.logs (timestamp, cluster, namespace, app, pod_name, container_name, host, fields_string, fields_number, log) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) %s", c.database, settings)
 
-	tx, err := c.client.Begin()
+	tx, err := c.client.BeginTx(ctx, nil)
 	if err != nil {
 		slog.Error("Begin transaction failure", slog.Any("error", err))
 		return err
@@ -80,14 +83,14 @@ func (c *Client) BufferWrite() error {
 
 	defer tx.Rollback()
 
-	stmt, err := tx.Prepare(sql)
+	stmt, err := tx.PrepareContext(ctx, sql)
 	if err != nil {
 		slog.Error("Prepare statement failure", slog.Any("error", err))
 		return err
 	}
 
 	for _, l := range c.buffer {
-		_, err = stmt.Exec(l.Timestamp, l.Cluster, l.Namespace, l.App, l.Pod, l.Container, l.Host, l.FieldsString, l.FieldsNumber, l.Log)
+		_, err = stmt.ExecContext(ctx, l.Timestamp, l.Cluster, l.Namespace, l.App, l.Pod, l.Container, l.Host, l.FieldsString, l.FieldsNumber, l.Log)
 
 		if err != nil {
 			slog.Error("Statement exec failure", slog.Any("error", err))
@@ -135,7 +138,7 @@ func NewClient(address, username, password, database, dialTimeout, connMaxLifeti
 	conn.SetMaxOpenConns(maxOpenConns)
 	conn.SetConnMaxLifetime(parsedConnMaxLifetime)
 
-	if err := conn.Ping(); err != nil {
+	if err := conn.PingContext(context.Background()); err != nil {
 		if exception, ok := err.(*clickhouse.Exception); ok {
 			slog.Error(fmt.Sprintf("[%d] %s \n%s\n", exception.Code, exception.Message, exception.StackTrace))
 		} else {
