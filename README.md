@@ -1,5 +1,14 @@
 # klogs
 
+> [!CAUTION]
+>
+> The klogs Fluent Bit plugin is deprecated and will not receive any further
+> updates. Please consider using the
+> [OpenTelemetry Collector](https://opentelemetry.io/docs/collector/) together
+> with the
+> [ClickHouse Exporter](https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/main/exporter/clickhouseexporter/README.md)
+> for storing your logs in ClickHouse.
+
 **klogs** can be used to write the logs collected by
 [Fluent Bit](https://fluentbit.io) to [ClickHouse](https://clickhouse.com).
 
